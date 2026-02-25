@@ -58,6 +58,7 @@ declare module 'vue' {
     StatusTag: typeof import('./components/StatusTag.vue')['default']
   }
   export interface GlobalDirectives {
+    vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

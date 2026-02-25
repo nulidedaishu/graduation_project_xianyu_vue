@@ -12,6 +12,11 @@ export const createProduct = (data: ProductCreateRequest): Promise<Product> => {
   return request.post('/api/products', data)
 }
 
+// 更新商品
+export const updateProduct = (id: number, data: ProductCreateRequest): Promise<Product> => {
+  return request.put(`/api/products/${id}`, data)
+}
+
 // 获取商品列表
 export const getProducts = (params?: ProductQueryRequest): Promise<PageResult<Product>> => {
   return request.get('/api/products', { params })
@@ -50,6 +55,11 @@ export const offlineProduct = (id: number): Promise<void> => {
 // 重新上架商品
 export const onlineProduct = (id: number): Promise<void> => {
   return request.post(`/api/products/${id}/online`)
+}
+
+// 删除商品
+export const deleteProduct = (id: number): Promise<void> => {
+  return request.delete(`/api/products/${id}`)
 }
 
 // 获取待审核商品列表（管理员）

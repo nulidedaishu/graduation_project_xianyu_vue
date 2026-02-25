@@ -38,20 +38,25 @@
           </template>
 
           <el-dropdown v-else @command="handleCommand">
-            <span class="user-info">
+            <span class="user-info" @click="goToUserProfile">
               <el-avatar :size="32" :src="userStore.avatar">
                 {{ userStore.nickname?.charAt(0) || 'U' }}
               </el-avatar>
               <span class="nickname">{{ userStore.nickname }}</span>
-              <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="user">
-                  <el-icon><User /></el-icon>个人中心
+                <el-dropdown-item command="published">
+                  <el-icon><CircleCheck /></el-icon>我发布的
                 </el-dropdown-item>
-                <el-dropdown-item command="my-products">
-                  <el-icon><Goods /></el-icon>我的商品
+                <el-dropdown-item command="sold">
+                  <el-icon><SoldOut /></el-icon>我卖出的
+                </el-dropdown-item>
+                <el-dropdown-item command="bought">
+                  <el-icon><ShoppingCart /></el-icon>我买到的
+                </el-dropdown-item>
+                <el-dropdown-item command="favorites">
+                  <el-icon><Star /></el-icon>我的收藏
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>退出登录
@@ -86,8 +91,10 @@ import {
   Search,
   Plus,
   Goods,
-  ArrowDown,
-  User,
+  CircleCheck,
+  SoldOut,
+  ShoppingCart,
+  Star,
   SwitchButton,
 } from '@element-plus/icons-vue'
 
@@ -102,6 +109,11 @@ const openInNewTab = (path: string) => {
   window.open(url, '_blank')
 }
 
+// 跳转到个人中心
+const goToUserProfile = () => {
+  router.push('/user')
+}
+
 // 搜索
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
@@ -110,17 +122,23 @@ const handleSearch = () => {
   }
 }
 
-const handleCommand = (command: string) => {
+const handleCommand = async (command: string) => {
   switch (command) {
-    case 'user':
-      openInNewTab('/user')
+    case 'published':
+      router.push('/my-products')
       break
-    case 'my-products':
-      openInNewTab('/my-products')
+    case 'sold':
+      router.push('/orders/sold')
+      break
+    case 'bought':
+      router.push('/orders/bought')
+      break
+    case 'favorites':
+      router.push('/favorites')
       break
     case 'logout':
-      userStore.logout()
-      window.location.href = '/login'
+      await userStore.logout()
+      router.push('/home')
       break
   }
 }

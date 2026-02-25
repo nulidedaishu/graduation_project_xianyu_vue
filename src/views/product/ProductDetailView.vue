@@ -69,25 +69,57 @@
             <el-divider />
 
             <div class="product-actions">
-              <el-button type="primary" size="large">
+              <!-- 非自己发布的商品：显示联系卖家 -->
+              <el-button
+                v-if="!isOwner"
+                type="primary"
+                size="large"
+                @click="handleContactSeller"
+              >
                 <el-icon><ChatDotRound /></el-icon>联系卖家
               </el-button>
-              <el-button
-                v-if="isOwner"
-                size="large"
-                @click="handleEdit"
-              >
-                编辑商品
-              </el-button>
+
+              <!-- 自己发布的商品：显示编辑、下架/上架、删除 -->
+              <template v-else>
+                <!-- 待审核(0)、已上架(1)、已驳回(2)、已下架(3)：显示编辑 -->
+                <el-button
+                  v-if="productStore.currentProduct.status === 0 || productStore.currentProduct.status === 1 || productStore.currentProduct.status === 2 || productStore.currentProduct.status === 3"
+                  size="large"
+                  @click="handleEdit"
+                >
+                  <el-icon><Edit /></el-icon>编辑商品
+                </el-button>
+                <!-- 待审核(0)或已上架(1)：显示下架 -->
+                <el-button
+                  v-if="productStore.currentProduct.status === 0 || productStore.currentProduct.status === 1"
+                  type="warning"
+                  size="large"
+                  @click="handleOffline"
+                >
+                  <el-icon><Download /></el-icon>下架商品
+                </el-button>
+                <!-- 已下架(3)：显示上架 -->
+                <el-button
+                  v-if="productStore.currentProduct.status === 3"
+                  type="success"
+                  size="large"
+                  @click="handleOnline"
+                >
+                  <el-icon><Upload /></el-icon>上架商品
+                </el-button>
+                <el-button type="danger" size="large" @click="handleDelete">
+                  <el-icon><Delete /></el-icon>删除商品
+                </el-button>
+              </template>
             </div>
           </el-card>
         </el-col>
       </el-row>
 
-      <!-- 商品详情 -->
+      <!-- 商品描述 -->
       <el-card class="detail-section" shadow="never">
         <template #header>
-          <div class="section-header">商品详情</div>
+          <div class="section-header">商品描述</div>
         </template>
         <div class="detail-content">{{ productStore.currentProduct.detail || '暂无详情' }}</div>
       </el-card>
@@ -109,7 +141,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound } from '@element-plus/icons-vue'
+import { ChatDotRound, Edit, Download, Upload, Delete } from '@element-plus/icons-vue'
 import { useProductStore } from '@/stores/product'
 import { useUserStore } from '@/stores'
 import StatusTag from '@/components/StatusTag.vue'
@@ -142,6 +174,59 @@ const formatDate = (dateStr?: string) => {
 // 编辑商品
 const handleEdit = () => {
   router.push(`/publish?id=${productId.value}`)
+}
+
+// 联系卖家
+const handleContactSeller = () => {
+  ElMessage.info('联系卖家功能开发中')
+}
+
+// 下架商品
+const handleOffline = async () => {
+  try {
+    await ElMessageBox.confirm('确定要下架该商品吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await productStore.toggleProductStatus(productId.value, 'offline')
+    ElMessage.success('商品已下架')
+    productStore.fetchProductDetail(productId.value)
+  } catch {
+    // 取消操作
+  }
+}
+
+// 上架商品
+const handleOnline = async () => {
+  try {
+    await ElMessageBox.confirm('确定要重新上架该商品吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+    await productStore.toggleProductStatus(productId.value, 'online')
+    ElMessage.success('商品已上架')
+    productStore.fetchProductDetail(productId.value)
+  } catch {
+    // 取消操作
+  }
+}
+
+// 删除商品
+const handleDelete = async () => {
+  try {
+    await ElMessageBox.confirm('确定要删除该商品吗？删除后不可恢复！', '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await productStore.removeProduct(productId.value)
+    ElMessage.success('商品已删除')
+    router.push('/my-products')
+  } catch {
+    // 取消操作
+  }
 }
 
 onMounted(() => {

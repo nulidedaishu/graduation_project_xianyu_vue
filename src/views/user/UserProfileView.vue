@@ -23,33 +23,48 @@
               <div class="stat-label">信用分</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ productStore.myProducts.length }}</div>
+              <div class="stat-value">{{ userStore.userInfo?.publishCount || 0 }}</div>
               <div class="stat-label">发布数</div>
             </div>
           </div>
         </el-card>
 
-        <!-- 快捷菜单 -->
+        <!-- 快捷入口 -->
         <el-card class="quick-menu" shadow="never">
           <template #header>快捷入口</template>
-          <el-menu :default-active="activeMenu" @select="handleMenuSelect">
-            <el-menu-item index="profile">
-              <el-icon><User /></el-icon>个人资料
-            </el-menu-item>
-            <el-menu-item index="my-products">
-              <el-icon><Goods /></el-icon>我的商品
-            </el-menu-item>
-            <el-menu-item index="publish">
-              <el-icon><Plus /></el-icon>发布闲置
-            </el-menu-item>
-          </el-menu>
+          <div class="quick-entry-grid">
+            <div class="quick-entry-item" @click="router.push('/my-products')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#409EFF"><CircleCheck /></el-icon>
+              </div>
+              <div class="entry-text">我发布的</div>
+            </div>
+            <div class="quick-entry-item" @click="router.push('/orders/sold')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#67C23A"><SoldOut /></el-icon>
+              </div>
+              <div class="entry-text">我卖出的</div>
+            </div>
+            <div class="quick-entry-item" @click="router.push('/orders/bought')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#E6A23C"><ShoppingCart /></el-icon>
+              </div>
+              <div class="entry-text">我买到的</div>
+            </div>
+            <div class="quick-entry-item" @click="router.push('/favorites')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#F56C6C"><Star /></el-icon>
+              </div>
+              <div class="entry-text">我的收藏</div>
+            </div>
+          </div>
         </el-card>
       </el-col>
 
       <!-- 右侧内容区 -->
       <el-col :xs="24" :md="16">
         <!-- 个人资料 -->
-        <el-card v-if="activeMenu === 'profile'" shadow="never">
+        <el-card shadow="never">
           <template #header>
             <div class="card-header">个人资料</div>
           </template>
@@ -72,70 +87,21 @@
             </el-form-item>
           </el-form>
         </el-card>
-
-        <!-- 我的商品 -->
-        <el-card v-if="activeMenu === 'my-products'" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>我的商品</span>
-              <el-button type="primary" size="small" @click="$router.push('/publish')">发布商品</el-button>
-            </div>
-          </template>
-
-          <el-empty v-if="productStore.myProducts.length === 0" description="暂无商品" />
-
-          <div v-else class="product-list">
-            <div
-              v-for="product in productStore.myProducts.slice(0, 4)"
-              :key="product.id"
-              class="product-item"
-              @click="$router.push(`/product/${product.id}`)"
-            >
-              <el-image :src="getFirstImage(product.imageUrls)" fit="cover" />
-              <div class="product-info">
-                <div class="name">{{ product.name }}</div>
-                <div class="price">¥{{ product.price.toFixed(2) }}</div>
-                <status-tag :status="product.status" />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="productStore.myProducts.length > 4" class="more-link">
-            <el-link type="primary" @click="$router.push('/my-products')">查看更多 <el-icon><ArrowRight /></el-icon></el-link>
-          </div>
-        </el-card>
-
-        <!-- 发布闲置 -->
-        <el-card v-if="activeMenu === 'publish'" shadow="never">
-          <template #header>发布闲置</template>
-          <div class="publish-tip">
-            <el-result icon="info" title="准备好发布闲置了吗？">
-              <template #sub-title>点击下方按钮开始发布</template>
-              <template #extra>
-                <el-button type="primary" @click="$router.push('/publish')">立即发布</el-button>
-              </template>
-            </el-result>
-          </div>
-        </el-card>
       </el-col>
     </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, Goods, Plus, ArrowRight } from '@element-plus/icons-vue'
+import { CircleCheck, SoldOut, ShoppingCart, Star } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
-import { useProductStore } from '@/stores/product'
 import { updateUser } from '@/api/user'
-import StatusTag from '@/components/StatusTag.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const productStore = useProductStore()
 
-const activeMenu = ref('profile')
 const saving = ref(false)
 
 const editForm = reactive({
@@ -143,22 +109,6 @@ const editForm = reactive({
   phone: userStore.userInfo?.phone || '',
   avatar: userStore.avatar || '',
 })
-
-// 获取第一张图片
-const getFirstImage = (imageUrls?: string) => {
-  if (!imageUrls) return ''
-  return imageUrls.split(',')[0] || ''
-}
-
-const handleMenuSelect = (index: string) => {
-  if (index === 'my-products') {
-    router.push('/my-products')
-  } else if (index === 'publish') {
-    router.push('/publish')
-  } else {
-    activeMenu.value = index
-  }
-}
 
 const handleSave = async () => {
   if (!userStore.userInfo?.id) return
@@ -176,10 +126,6 @@ const handleSave = async () => {
     saving.value = false
   }
 }
-
-onMounted(() => {
-  productStore.fetchMyProducts()
-})
 </script>
 
 <style scoped lang="scss">
@@ -232,6 +178,66 @@ onMounted(() => {
 
     .el-menu {
       border-right: none;
+    }
+  }
+
+  // 快捷入口网格
+  .quick-entry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .quick-entry-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f5f7fa;
+
+    &:hover {
+      background-color: #ecf5ff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .entry-icon {
+      margin-bottom: 8px;
+      padding: 12px;
+      border-radius: 50%;
+      background-color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .entry-text {
+      font-size: 14px;
+      color: #606266;
+      font-weight: 500;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .quick-entry-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .quick-entry-item {
+      padding: 16px 8px;
+
+      .entry-icon {
+        padding: 10px;
+      }
+
+      .entry-text {
+        font-size: 13px;
+      }
     }
   }
 

@@ -7,8 +7,10 @@ import {
   getProductsByCategory,
   getMyProducts,
   createProduct,
+  updateProduct,
   offlineProduct,
   onlineProduct,
+  deleteProduct,
   getRecommendedProducts,
 } from '@/api/product'
 import type { Product, ProductQueryRequest, ProductCreateRequest } from '@/types/api'
@@ -82,12 +84,13 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
-  const fetchMyProducts = async () => {
+  const fetchMyProducts = async (status?: number) => {
     loading.value = true
     try {
       const data = await getMyProducts({
         page: page.value,
         size: size.value,
+        status,
       })
       if (data) {
         myProducts.value = data.records || []
@@ -113,12 +116,20 @@ export const useProductStore = defineStore('product', () => {
     return await createProduct(data)
   }
 
+  const editProduct = async (id: number, data: ProductCreateRequest) => {
+    return await updateProduct(id, data)
+  }
+
   const toggleProductStatus = async (id: number, status: 'online' | 'offline') => {
     if (status === 'offline') {
       return await offlineProduct(id)
     } else {
       return await onlineProduct(id)
     }
+  }
+
+  const removeProduct = async (id: number) => {
+    return await deleteProduct(id)
   }
 
   // 获取推荐商品
@@ -221,6 +232,26 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
+  // 加载更多（我的商品）
+  const loadMoreMyProducts = async (status?: number) => {
+    if (!hasMore.value) return
+    page.value++
+    loading.value = true
+    try {
+      const data = await getMyProducts({
+        page: page.value,
+        size: size.value,
+        status,
+      })
+      if (data) {
+        myProducts.value.push(...(data.records || []))
+        hasMore.value = data.records?.length === size.value
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
   const resetPagination = () => {
     page.value = 1
     total.value = 0
@@ -243,12 +274,15 @@ export const useProductStore = defineStore('product', () => {
     fetchMyProducts,
     fetchProductDetail,
     publishProduct,
+    editProduct,
     toggleProductStatus,
+    removeProduct,
     resetPagination,
     fetchRecommendedProducts,
     loadMoreLatest,
     loadMoreRecommend,
     loadMoreSearchProducts,
     loadMoreByCategory,
+    loadMoreMyProducts,
   }
 })

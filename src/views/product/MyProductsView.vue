@@ -3,94 +3,133 @@
     <!-- 操作栏 -->
     <div class="action-bar">
       <h2>我的商品</h2>
-      <el-button type="primary" @click="$router.push('/publish')">
-        <el-icon><Plus /></el-icon>发布商品
-      </el-button>
+      <!-- 状态筛选 -->
+      <el-radio-group v-model="filterStatus" size="default" @change="handleFilterChange">
+        <el-radio-button :label="null">全部</el-radio-button>
+        <el-radio-button :label="0">待审核</el-radio-button>
+        <el-radio-button :label="1">已上架</el-radio-button>
+        <el-radio-button :label="2">已驳回</el-radio-button>
+        <el-radio-button :label="3">已下架</el-radio-button>
+        <el-radio-button :label="4">已售出</el-radio-button>
+      </el-radio-group>
     </div>
 
     <!-- 商品列表 -->
-    <el-card shadow="never">
-      <el-table v-loading="productStore.loading" :data="productStore.myProducts">
-        <el-table-column label="商品" min-width="200">
-          <template #default="{ row }">
-            <div class="product-cell">
-              <el-image
-                :src="getFirstImage(row.imageUrls)"
-                class="product-thumb"
-                fit="cover"
-              />
-              <div class="product-info">
-                <div class="name">{{ row.name }}</div>
-                <div class="price">¥{{ row.price.toFixed(2) }}</div>
+    <el-card shadow="never" class="product-list-card">
+      <div
+        v-infinite-scroll="loadMore"
+        :infinite-scroll-disabled="loadingMore || !hasMore"
+        :infinite-scroll-distance="50"
+        class="infinite-scroll-wrapper"
+      >
+        <el-table v-loading="productStore.loading && !loadingMore" :data="filteredProducts">
+          <el-table-column label="商品" min-width="200">
+            <template #default="{ row }">
+              <div class="product-cell">
+                <el-image
+                  :src="getFirstImage(row.imageUrls)"
+                  class="product-thumb"
+                  fit="cover"
+                />
+                <div class="product-info">
+                  <div class="name">{{ row.name }}</div>
+                  <div class="price">¥{{ row.price.toFixed(2) }}</div>
+                </div>
               </div>
-            </div>
-          </template>
-        </el-table-column>
+            </template>
+          </el-table-column>
 
-        <el-table-column label="分类" prop="categoryName" width="120" />
+          <el-table-column label="分类" prop="categoryName" width="120" />
 
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <status-tag :status="row.status" />
-          </template>
-        </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <status-tag :status="row.status" />
+            </template>
+          </el-table-column>
 
-        <el-table-column label="发布时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createTime) }}
-          </template>
-        </el-table-column>
+          <el-table-column label="发布时间" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.createTime) }}
+            </template>
+          </el-table-column>
 
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="viewDetail(row.id)">查看</el-button>
-            <el-button
-              v-if="row.status === 1"
-              link
-              type="warning"
-              @click="handleOffline(row.id)"
-            >
-              下架
-            </el-button>
-            <el-button
-              v-if="row.status === 3"
-              link
-              type="success"
-              @click="handleOnline(row.id)"
-            >
-              上架
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="viewDetail(row.id)">查看</el-button>
+              <!-- 待审核(0)或已上架(1)：显示下架 -->
+              <el-button
+                v-if="row.status === 0 || row.status === 1"
+                link
+                type="warning"
+                @click="handleOffline(row.id)"
+              >
+                下架
+              </el-button>
+              <!-- 已下架(3)：显示上架 -->
+              <el-button
+                v-if="row.status === 3"
+                link
+                type="success"
+                @click="handleOnline(row.id)"
+              >
+                上架
+              </el-button>
+              <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 加载更多提示 -->
+        <div class="load-more-status">
+          <el-divider v-if="loadingMore">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span style="margin-left: 8px;">加载中...</span>
+          </el-divider>
+          <el-divider v-else-if="!hasMore && filteredProducts.length > 0">
+            <span style="color: #909399;">没有更多了</span>
+          </el-divider>
+        </div>
+      </div>
 
       <!-- 空状态 -->
-      <el-empty v-if="!productStore.loading && productStore.myProducts.length === 0" description="暂无商品" />
-
-      <!-- 分页 -->
-      <div v-if="productStore.total > 0" class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="currentPage"
-          :total="productStore.total"
-          layout="prev, pager, next"
-          @current-change="handlePageChange"
-        />
-      </div>
+      <el-empty v-if="!productStore.loading && filteredProducts.length === 0" description="暂无商品" />
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus } from '@element-plus/icons-vue'
 import { useProductStore } from '@/stores/product'
+import { Loading } from '@element-plus/icons-vue'
 import StatusTag from '@/components/StatusTag.vue'
 
 const router = useRouter()
 const productStore = useProductStore()
 
-const currentPage = ref(1)
+// 筛选状态
+const filterStatus = ref<number | null>(null)
+
+// 加载更多状态
+const loadingMore = ref(false)
+
+// 是否有更多数据
+const hasMore = computed(() => productStore.hasMore)
+
+// 商品列表（现在直接使用 store 的数据）
+const filteredProducts = computed(() => productStore.myProducts)
+
+// 加载更多数据
+const loadMore = async () => {
+  if (loadingMore.value || !hasMore.value) return
+
+  loadingMore.value = true
+  try {
+    await productStore.loadMoreMyProducts(filterStatus.value ?? undefined)
+  } finally {
+    loadingMore.value = false
+  }
+}
 
 // 获取第一张图片
 const getFirstImage = (imageUrls?: string) => {
@@ -131,15 +170,33 @@ const handleOnline = async (id: number) => {
   }
 }
 
-// 页码变化
-const handlePageChange = (page: number) => {
-  currentPage.value = page
-  productStore.page = page
+// 删除商品
+const handleDelete = async (id: number) => {
+  try {
+    await ElMessageBox.confirm('确定要删除该商品吗？删除后不可恢复！', '警告', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await productStore.removeProduct(id)
+    ElMessage.success('商品已删除')
+    fetchData()
+  } catch {
+    // 取消操作或错误已由 request 拦截器处理
+  }
+}
+
+// 筛选状态变化 - 重新调用接口获取数据
+const handleFilterChange = () => {
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  // 重新加载数据
   fetchData()
 }
 
 const fetchData = () => {
-  productStore.fetchMyProducts()
+  productStore.resetPagination()
+  productStore.fetchMyProducts(filterStatus.value ?? undefined)
 }
 
 onMounted(() => {
@@ -149,11 +206,31 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .my-products-view {
+  .product-list-card {
+    overflow: visible;
+  }
+
+  .infinite-scroll-wrapper {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+
+  .load-more-status {
+    padding: 16px 0;
+    text-align: center;
+
+    .el-divider {
+      margin: 0;
+    }
+  }
+
   .action-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
 
     h2 {
       margin: 0;
@@ -187,10 +264,11 @@ onMounted(() => {
     }
   }
 
-  .pagination-wrapper {
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
+  @media (max-width: 768px) {
+    .action-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 }
 </style>

@@ -14,8 +14,8 @@
         label-width="100px"
         size="large"
       >
-        <el-form-item label="商品名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入商品名称" />
+        <el-form-item label="标题" prop="name">
+          <el-input v-model="form.name" placeholder="请输入标题" />
         </el-form-item>
 
         <el-form-item label="商品分类" prop="categoryId">
@@ -30,28 +30,18 @@
         </el-form-item>
 
         <el-form-item label="商品价格" prop="price">
-          <el-input-number
-            v-model="form.price"
-            :min="0.01"
-            :precision="2"
+          <el-input
+            v-model="priceInput"
             placeholder="请输入价格"
             style="width: 200px"
-          />
-          <span class="unit">元</span>
+          >
+            <template #prepend>￥</template>
+          </el-input>
         </el-form-item>
 
         <el-form-item label="商品描述" prop="description">
           <el-input
             v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="简要描述商品"
-          />
-        </el-form-item>
-
-        <el-form-item label="商品详情" prop="detail">
-          <el-input
-            v-model="form.detail"
             type="textarea"
             :rows="5"
             placeholder="详细描述商品信息"
@@ -99,19 +89,32 @@ const formRef = ref<FormInstance>()
 const submitting = ref(false)
 
 const isEdit = computed(() => !!route.query.id)
+const productId = computed(() => Number(route.query.id))
 
 const form = reactive({
+  id: undefined as number | undefined,
   name: '',
   description: '',
   price: 0,
   categoryId: undefined as number | undefined,
   imageUrls: '',
-  detail: '',
   contactInfo: '',
 })
 
+// 价格输入框显示值（带￥符号格式）
+const priceInput = computed({
+  get: () => {
+    if (!form.price && form.price !== 0) return ''
+    return form.price.toFixed(2)
+  },
+  set: (val: string) => {
+    const num = parseFloat(val)
+    form.price = isNaN(num) ? 0 : num
+  }
+})
+
 const rules: FormRules = {
-  name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择分类', trigger: 'change' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
 }
@@ -123,15 +126,22 @@ const handleSubmit = async () => {
     if (valid && form.categoryId) {
       submitting.value = true
       try {
-        await productStore.publishProduct({
+        const data = {
+          id: form.id,
           name: form.name,
           description: form.description,
           price: form.price,
           categoryId: form.categoryId,
           imageUrls: form.imageUrls,
-          detail: form.detail,
           contactInfo: form.contactInfo,
-        })
+        }
+        if (isEdit.value) {
+          // 编辑商品 - 调用更新接口
+          await productStore.editProduct(productId.value, data)
+        } else {
+          // 发布新商品
+          await productStore.publishProduct(data)
+        }
         ElMessage.success(isEdit.value ? '修改成功' : '发布成功，等待审核')
         router.push('/my-products')
       } finally {
@@ -141,8 +151,22 @@ const handleSubmit = async () => {
   })
 }
 
-onMounted(() => {
-  categoryStore.fetchCategories()
+onMounted(async () => {
+  await categoryStore.fetchCategories()
+  // 编辑模式：加载商品详情
+  if (isEdit.value) {
+    await productStore.fetchProductDetail(productId.value)
+    const product = productStore.currentProduct
+    if (product) {
+      form.id = product.id
+      form.name = product.name
+      form.description = product.description || ''
+      form.price = product.price
+      form.categoryId = product.categoryId
+      form.imageUrls = product.imageUrls || ''
+      form.contactInfo = product.contactInfo || ''
+    }
+  }
 })
 </script>
 
