@@ -16,6 +16,16 @@ const pendingMap = new Map<string, AbortController>()
 
 // 生成请求key
 const getRequestKey = (config: AxiosRequestConfig): string => {
+  // 对购物车GET请求添加时间戳，避免重复请求取消
+  // 购物车GET请求是幂等操作，不应被取消
+  const isCartGetRequest = config.method?.toLowerCase() === 'get' &&
+                         config.url?.includes('/api/cart')
+
+  if (isCartGetRequest) {
+    // 添加时间戳使每个请求key唯一
+    return `${config.method}_${config.url}_${Date.now()}`
+  }
+
   return `${config.method}_${config.url}_${JSON.stringify(config.params)}_${JSON.stringify(config.data)}`
 }
 

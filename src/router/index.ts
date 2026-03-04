@@ -45,6 +45,42 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/product/MyProductsView.vue'),
         meta: { title: '我的商品', requiresAuth: true },
       },
+      {
+        path: '/cart',
+        name: 'Cart',
+        component: () => import('@/views/cart/CartView.vue'),
+        meta: { title: '购物车', requiresAuth: true },
+      },
+      {
+        path: '/order/confirm',
+        name: 'OrderConfirm',
+        component: () => import('@/views/order/OrderConfirmView.vue'),
+        meta: { title: '确认订单', requiresAuth: true },
+      },
+      {
+        path: '/order/:id',
+        name: 'OrderDetail',
+        component: () => import('@/views/order/OrderDetailView.vue'),
+        meta: { title: '订单详情', requiresAuth: true },
+      },
+      {
+        path: '/orders/bought',
+        name: 'OrdersBought',
+        component: () => import('@/views/order/OrderListView.vue'),
+        meta: { title: '我买到的', requiresAuth: true },
+      },
+      {
+        path: '/orders/sold',
+        name: 'OrdersSold',
+        component: () => import('@/views/order/OrderListView.vue'),
+        meta: { title: '我卖出的', requiresAuth: true },
+      },
+      {
+        path: '/user/addresses',
+        name: 'UserAddresses',
+        component: () => import('@/views/user/AddressView.vue'),
+        meta: { title: '收货地址', requiresAuth: true },
+      },
     ],
   },
   {

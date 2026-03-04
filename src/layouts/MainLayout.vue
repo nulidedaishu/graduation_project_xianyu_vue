@@ -23,6 +23,21 @@
           </el-input>
         </div>
         <div class="search-actions">
+          <!-- 购物车 -->
+          <el-badge
+            v-if="userStore.isLoggedIn"
+            :value="cartStore.cartCount"
+            :hidden="cartStore.cartCount === 0"
+            class="cart-badge"
+          >
+            <el-button
+              circle
+              @click="router.push('/cart')"
+            >
+              <el-icon :size="18"><ShoppingCart /></el-icon>
+            </el-button>
+          </el-badge>
+
           <el-button
             v-if="userStore.isLoggedIn"
             type="primary"
@@ -83,9 +98,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores'
+import { useUserStore, useCartStore } from '@/stores'
 import {
   ShoppingBag,
   Search,
@@ -100,8 +115,26 @@ import {
 
 const router = useRouter()
 const userStore = useUserStore()
+const cartStore = useCartStore()
 
 const searchKeyword = ref('')
+
+// 初始化购物车数量
+onMounted(() => {
+  if (userStore.isLoggedIn) {
+    cartStore.fetchCartCount()
+  }
+})
+
+// 监听登录状态变化，登录后加载购物车数量
+watch(() => userStore.isLoggedIn, (isLoggedIn) => {
+  if (isLoggedIn) {
+    cartStore.fetchCartCount()
+  } else {
+    // 登出时清空购物车数量
+    cartStore.cartCount = 0
+  }
+})
 
 // 在新标签页打开链接
 const openInNewTab = (path: string) => {
@@ -124,6 +157,9 @@ const handleSearch = () => {
 
 const handleCommand = async (command: string) => {
   switch (command) {
+    case 'cart':
+      router.push('/cart')
+      break
     case 'published':
       router.push('/my-products')
       break
@@ -202,6 +238,13 @@ const handleCommand = async (command: string) => {
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
+  }
+
+  .cart-badge {
+    :deep(.el-badge__content) {
+      top: 8px;
+      right: 8px;
+    }
   }
 }
 

@@ -57,6 +57,12 @@
               </div>
               <div class="entry-text">我的收藏</div>
             </div>
+            <div class="quick-entry-item" @click="router.push('/user/addresses')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#909399"><Location /></el-icon>
+              </div>
+              <div class="entry-text">收货地址</div>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -95,7 +101,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { CircleCheck, SoldOut, ShoppingCart, Star } from '@element-plus/icons-vue'
+import { CircleCheck, SoldOut, ShoppingCart, Star, Location } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { updateUser } from '@/api/user'
 
@@ -184,7 +190,7 @@ const handleSave = async () => {
   // 快捷入口网格
   .quick-entry-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
 
@@ -224,7 +230,7 @@ const handleSave = async () => {
 
   @media (max-width: 768px) {
     .quick-entry-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
     }
 
