@@ -603,10 +603,20 @@ onMounted(async () => {
         return
       }
 
+      // 处理图片URL（兼容数组和字符串类型）
+      let productImage = ''
+      if (product.imageUrls) {
+        if (Array.isArray(product.imageUrls)) {
+          productImage = product.imageUrls[0] || ''
+        } else if (typeof product.imageUrls === 'string') {
+          productImage = product.imageUrls.split(',')[0] || ''
+        }
+      }
+
       orderItems.value = [{
         productId: product.id,
         productName: product.name,
-        productImage: product.imageUrls?.split(',')[0] || '',
+        productImage,
         price: product.price,
         quantity: quantity.value,
         stock: product.stock,

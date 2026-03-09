@@ -86,9 +86,11 @@
 
             <el-form-item label="头像">
               <ImageUpload
+                ref="avatarUploadRef"
                 v-model="avatarList"
                 :multiple="false"
                 dir="avatars"
+                @files-change="handleAvatarChange"
               />
             </el-form-item>
 
@@ -114,6 +116,8 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const saving = ref(false)
+const avatarUploadRef = ref()
+const hasLocalAvatar = ref(false) // 标记是否有本地头像文件
 
 const editForm = reactive({
   nickname: userStore.nickname || '',
@@ -129,18 +133,33 @@ const avatarList = computed({
   },
 })
 
+// 处理头像文件变化
+const handleAvatarChange = (files: any[]) => {
+  hasLocalAvatar.value = files.length > 0
+}
+
 const handleSave = async () => {
   if (!userStore.userInfo?.id) return
 
   saving.value = true
   try {
+    // 如果有本地头像文件，先上传
+    let finalAvatar = editForm.avatar
+    if (hasLocalAvatar.value && avatarUploadRef.value) {
+      const uploadedUrls = await avatarUploadRef.value.uploadAllImages()
+      finalAvatar = uploadedUrls[0] || ''
+    }
+    
     await updateUser(userStore.userInfo.id, {
       nickname: editForm.nickname,
       phone: editForm.phone,
-      avatar: editForm.avatar,
+      avatar: finalAvatar,
     })
     ElMessage.success('保存成功')
     userStore.fetchUserInfo()
+  } catch (error: any) {
+    console.error('保存失败:', error)
+    ElMessage.error(error.message || '保存失败，请重试')
   } finally {
     saving.value = false
   }

@@ -30,13 +30,39 @@
         </el-form-item>
 
         <el-form-item label="商品价格" prop="price">
-          <el-input
-            v-model="priceInput"
-            placeholder="请输入价格"
-            style="width: 200px"
-          >
-            <template #prepend>￥</template>
-          </el-input>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <el-input-number
+              v-model="form.price"
+              :min="0"
+              :max="999999"
+              :precision="2"
+              :step="1"
+              placeholder="请输入商品价格"
+              style="width: 180px"
+              controls-position="right"
+            >
+              <template #prefix>
+                <span style="color: #909399; font-size: 14px;">￥</span>
+              </template>
+            </el-input-number>
+            
+            <span style="color: #909399; font-size: 14px;">运费</span>
+            
+            <el-input-number
+              v-model="form.freight"
+              :min="0"
+              :max="999999"
+              :precision="2"
+              :step="1"
+              placeholder="请输入运费"
+              style="width: 150px"
+              controls-position="right"
+            >
+              <template #prefix>
+                <span style="color: #909399; font-size: 14px;">￥</span>
+              </template>
+            </el-input-number>
+          </div>
         </el-form-item>
 
         <el-form-item label="商品描述" prop="description">
@@ -50,16 +76,25 @@
 
         <el-form-item label="商品图片" prop="imageList">
           <ImageUpload
+            ref="imageUploadRef"
             v-model="form.imageList"
             :multiple="true"
             :limit="5"
             dir="products"
+            @files-change="handleFilesChange"
           />
-          <p class="form-tip">第一张图片将作为主图，最多上传5张</p>
+          <p class="form-tip">第一张图片将作为主图，最多上传 5 张</p>
         </el-form-item>
 
-        <el-form-item label="联系方式" prop="contactInfo">
-          <el-input v-model="form.contactInfo" placeholder="微信号、手机号等" />
+        <el-form-item label="所在地区">
+          <el-cascader
+            v-model="form.region"
+            :props="cascaderProps"
+            placeholder="请选择省 / 市 / 区（可选）"
+            style="width: 100%"
+            clearable
+            @change="handleRegionChange"
+          />
         </el-form-item>
 
         <el-form-item>
@@ -80,6 +115,9 @@ import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
 import ImageUpload from '@/components/ImageUpload.vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import type { CascaderProps } from 'element-plus'
+import { getProvinces, getCities, getDistricts } from '@/api/address'
+import type { ProvinceVO, CityVO, DistrictVO } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,7 +125,9 @@ const categoryStore = useCategoryStore()
 const productStore = useProductStore()
 
 const formRef = ref<FormInstance>()
+const imageUploadRef = ref()
 const submitting = ref(false)
+const hasLocalFiles = ref(false) // 标记是否有本地文件
 
 const isEdit = computed(() => !!route.query.id)
 const productId = computed(() => Number(route.query.id))
@@ -95,29 +135,83 @@ const productId = computed(() => Number(route.query.id))
 const form = reactive({
   name: '',
   description: '',
-  price: 0,
+  price: 0 as number | undefined,
+  shippingFee: 0 as number | undefined,  // 运费
   categoryId: undefined as number | undefined,
-  imageList: [] as string[], // 所有图片URL，第一张为主图
-  contactInfo: '',
-})
-
-// 价格输入框显示值（带￥符号格式）
-const priceInput = computed({
-  get: () => {
-    if (!form.price && form.price !== 0) return ''
-    return form.price.toFixed(2)
-  },
-  set: (val: string) => {
-    const num = parseFloat(val)
-    form.price = isNaN(num) ? 0 : num
-  }
+  imageList: [] as string[], // 所有图片 URL，第一张为主图
+  region: [] as number[],    // 省市区 ID 数组
+  provinceId: 0 as number,
+  cityId: 0 as number,
+  districtId: 0 as number,
 })
 
 const rules: FormRules = {
   name: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择分类', trigger: 'change' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
-  imageList: [{ required: true, message: '请至少上传一张商品图片', trigger: 'change', type: 'array', min: 1 }],
+}
+
+// 级联选择器懒加载配置
+const cascaderProps: CascaderProps = {
+  lazy: true,
+  value: 'id',
+  label: 'name',
+  leaf: 'leaf',
+  lazyLoad: async (node, resolve) => {
+    const { level } = node
+
+    try {
+      if (level === 0) {
+        // 加载省份列表
+        const res = await getProvinces()
+        const provinces = (res || []).map((p: ProvinceVO) => ({
+          ...p,
+          leaf: false,
+        }))
+        resolve(provinces)
+      } else if (level === 1) {
+        // 加载城市列表
+        const provinceId = node.value as number
+        const res = await getCities(provinceId)
+        const cities = (res || []).map((c: CityVO) => ({
+          ...c,
+          leaf: false,
+        }))
+        resolve(cities)
+      } else if (level === 2) {
+        // 加载区县列表
+        const cityId = node.value as number
+        const res = await getDistricts(cityId)
+        const districts = (res || []).map((d: DistrictVO) => ({
+          ...d,
+          leaf: true,
+        }))
+        resolve(districts)
+      }
+    } catch (error) {
+      console.error('加载地区数据失败:', error)
+      ElMessage.error('加载地区数据失败')
+      resolve([])
+    }
+  },
+}
+
+// 地区选择变化处理
+const handleRegionChange = (value: number[]) => {
+  if (value && value.length === 3) {
+    form.provinceId = value[0]
+    form.cityId = value[1]
+    form.districtId = value[2]
+  } else {
+    form.provinceId = 0
+    form.cityId = 0
+    form.districtId = 0
+  }
+}
+
+// 处理本地文件变化
+const handleFilesChange = (files: any[]) => {
+  hasLocalFiles.value = files.length > 0
 }
 
 const handleSubmit = async () => {
@@ -127,15 +221,30 @@ const handleSubmit = async () => {
     if (valid && form.categoryId) {
       submitting.value = true
       try {
-        // 拆分主图和附图
+        // 步骤 1: 如果有本地文件，先上传到 OSS
+        let finalImageList = form.imageList
+        if (hasLocalFiles.value && imageUploadRef.value) {
+          finalImageList = await imageUploadRef.value.uploadAllImages()
+        }
+        
+        // 步骤 2: 确保图片列表不为空
+        if (finalImageList.length === 0) {
+          ElMessage.error('请至少上传一张图片')
+          return
+        }
+        
+        // 步骤 3: 提交表单数据
         const data = {
           name: form.name,
           description: form.description,
           price: form.price,
+          shippingFee: form.shippingFee || 0,  // 运费
           categoryId: form.categoryId,
-          mainImageUrl: form.imageList[0] || '',      // 第一张为主图
-          otherImageUrls: form.imageList.slice(1),    // 剩余为附图
-          contactInfo: form.contactInfo,
+          mainImageUrl: finalImageList[0] || '',      // 第一张为主图
+          otherImageUrls: finalImageList.slice(1),    // 剩余为附图
+          provinceId: form.provinceId || undefined,
+          cityId: form.cityId || undefined,
+          districtId: form.districtId || undefined,
         }
         if (isEdit.value) {
           // 编辑商品 - 调用更新接口
@@ -146,6 +255,9 @@ const handleSubmit = async () => {
         }
         ElMessage.success(isEdit.value ? '修改成功' : '发布成功，等待审核')
         router.push('/my-products')
+      } catch (error: any) {
+        console.error('提交失败:', error)
+        ElMessage.error(error.message || '提交失败，请重试')
       } finally {
         submitting.value = false
       }
@@ -163,6 +275,7 @@ onMounted(async () => {
       form.name = product.name
       form.description = product.description || ''
       form.price = product.price
+      form.shippingFee = product.shippingFee || 0
       form.categoryId = product.categoryId
       // 合并主图和附图为一个数组
       const images: string[] = []
@@ -172,13 +285,20 @@ onMounted(async () => {
       if (product.otherImageUrls?.length) {
         images.push(...product.otherImageUrls)
       }
-      // 向后兼容：如果没有新字段，使用旧的imageUrls
+      // 向后兼容：如果没有新字段，使用旧的 imageUrls
       if (images.length === 0 && product.imageUrls) {
         const oldImages = product.imageUrls.split(',').map(url => url.trim()).filter(Boolean)
         images.push(...oldImages)
       }
       form.imageList = images
-      form.contactInfo = product.contactInfo || ''
+      
+      // 加载地区信息
+      if (product.provinceId && product.cityId && product.districtId) {
+        form.region = [product.provinceId, product.cityId, product.districtId]
+        form.provinceId = product.provinceId
+        form.cityId = product.cityId
+        form.districtId = product.districtId
+      }
     }
   }
 })

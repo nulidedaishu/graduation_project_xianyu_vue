@@ -3,24 +3,22 @@
     <!-- 图片预览列表 -->
     <div class="image-list">
       <div
-        v-for="(url, index) in modelValue"
-        :key="url + index"
+        v-for="(img, index) in displayImages"
+        :key="img.url + index"
         class="image-item"
-        :class="{ 'is-main': index === 0 }"
       >
         <el-image
-          :src="url"
+          :src="img.url"
           fit="cover"
           class="preview-image"
-          :preview-src-list="modelValue"
+          :preview-src-list="displayImages.map(i => i.url)"
           :initial-index="index"
         />
-        <!-- 主图标记 -->
-        <div v-if="index === 0" class="main-badge">主图</div>
-        <!-- 删除按钮 -->
-        <div class="image-actions">
-          <el-icon class="delete-btn" @click.stop="removeImage(index)">
-            <Close />
+        <!-- 删除按钮 - 固定在右上角 -->
+        <div class="delete-btn-wrapper" @click.stop="removeImage(index)">
+          <el-icon class="delete-btn">
+            <Close v-if="img.uploaded" />
+            <RefreshLeft v-else />
           </el-icon>
         </div>
       </div>
@@ -54,27 +52,39 @@
 
     <!-- 提示信息 -->
     <p class="upload-tip">
+      <span v-if="!uploading && localFiles.length > 0">已选择{{ localFiles.length }}张图片，</span>
       <span v-if="multiple && modelValue.length > 0">第一张图片将作为主图，</span>
-      支持jpg、png、gif格式，单张图片超过10MB将自动压缩
+      支持 jpg、png、gif 格式，单张图片超过 10MB 将自动压缩
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Plus, Close } from '@element-plus/icons-vue'
+import { Plus, Close, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { UploadFile, UploadRawFile } from 'element-plus'
 import { getOssSignature, type OssSignature } from '@/api/oss'
 
+interface ImageFile {
+  /** 临时预览 URL */
+  url: string
+  /** 原始文件对象 */
+  file: File
+  /** 是否已上传到 OSS */
+  uploaded: boolean
+  /** OSS URL（上传后才有） */
+  ossUrl?: string
+}
+
 interface Props {
-  /** 图片URL数组 */
+  /** 图片 URL 数组（OSS 地址） */
   modelValue: string[]
   /** 是否多图模式 */
   multiple?: boolean
   /** 最大上传数量 */
   limit?: number
-  /** OSS上传目录 */
+  /** OSS 上传目录 */
   dir?: string
 }
 
@@ -86,15 +96,20 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]
+  'files-change': [files: ImageFile[]] // 新增：通知父组件本地文件变化
 }>()
 
 const uploadRef = ref()
 const uploading = ref(false)
 const uploadProgress = ref(0)
 
+/** 本地图片文件列表（未上传到 OSS） */
+const localFiles = ref<ImageFile[]>([])
+
 /** 是否还可以继续上传 */
 const canUpload = computed(() => {
-  return props.modelValue.length < props.limit
+  const totalImages = props.modelValue.length + localFiles.value.length
+  return totalImages < props.limit
 })
 
 /** 上传按钮文字 */
@@ -103,6 +118,15 @@ const uploadText = computed(() => {
     return props.modelValue.length === 0 ? '点击上传' : '继续添加'
   }
   return '点击上传'
+})
+
+/** 显示用的图片列表（合并已上传和未上传的） */
+const displayImages = computed(() => {
+  // 已上传的 OSS 图片
+  const ossImages = props.modelValue.map(url => ({ url, uploaded: true }))
+  // 未上传的本地图片
+  const localImages = localFiles.value.map(f => ({ url: f.url, uploaded: false }))
+  return [...ossImages, ...localImages]
 })
 
 /** 压缩图片 */
@@ -195,7 +219,7 @@ const uploadToOss = async (file: File, signature: OssSignature): Promise<string>
   return `${signature.host}/${key}`
 }
 
-/** 处理文件选择 */
+/** 处理文件选择 - 只保存本地，不立即上传 */
 const handleFileChange = async (uploadFile: UploadFile) => {
   const rawFile = uploadFile.raw
   if (!rawFile) return
@@ -206,36 +230,29 @@ const handleFileChange = async (uploadFile: UploadFile) => {
     return
   }
 
-  uploading.value = true
-  uploadProgress.value = 0
-
   try {
-    // 步骤1: 压缩图片（如需要）
-    uploadProgress.value = 10
+    // 压缩图片（如需要）
     const compressedFile = await compressImage(rawFile)
-
-    // 步骤2: 获取OSS签名
-    uploadProgress.value = 30
-    const signature = await getOssSignature()
-
-    // 步骤3: 上传到OSS
-    uploadProgress.value = 60
-    const imageUrl = await uploadToOss(compressedFile, signature)
-
-    // 步骤4: 更新图片列表
-    uploadProgress.value = 100
-    const newList = [...props.modelValue, imageUrl]
-    emit('update:modelValue', newList)
-
-    ElMessage.success('上传成功')
+    
+    // 生成临时预览 URL
+    const tempUrl = URL.createObjectURL(compressedFile)
+    
+    // 保存到本地文件列表
+    const imageFile: ImageFile = {
+      url: tempUrl,
+      file: compressedFile,
+      uploaded: false,
+    }
+    
+    localFiles.value.push(imageFile)
+    
+    // 通知父组件文件变化
+    emit('files-change', localFiles.value)
+    
+    ElMessage.success('图片已添加，请点击提交按钮上传')
   } catch (error: any) {
-    console.error('上传失败:', error)
-    ElMessage.error(error.message || '上传失败，请重试')
-  } finally {
-    uploading.value = false
-    uploadProgress.value = 0
-    // 清除上传组件的文件列表
-    uploadRef.value?.clearFiles?.()
+    console.error('图片处理失败:', error)
+    ElMessage.error(error.message || '图片处理失败')
   }
 }
 
@@ -246,10 +263,103 @@ const handleExceed = () => {
 
 /** 删除图片 */
 const removeImage = (index: number) => {
-  const newList = [...props.modelValue]
-  newList.splice(index, 1)
-  emit('update:modelValue', newList)
+  // 计算在哪个数组中
+  const ossCount = props.modelValue.length
+  
+  if (index < ossCount) {
+    // 删除已上传的 OSS 图片
+    const newList = [...props.modelValue]
+    newList.splice(index, 1)
+    emit('update:modelValue', newList)
+  } else {
+    // 删除未上传的本地图片
+    const localIndex = index - ossCount
+    const fileToRemove = localFiles.value[localIndex]
+    
+    // 释放临时 URL
+    if (fileToRemove.url.startsWith('blob:')) {
+      URL.revokeObjectURL(fileToRemove.url)
+    }
+    
+    localFiles.value.splice(localIndex, 1)
+    
+    // 通知父组件文件变化
+    emit('files-change', localFiles.value)
+  }
 }
+
+/** 批量上传所有本地图片到 OSS */
+const uploadAllImages = async (): Promise<string[]> => {
+  if (localFiles.value.length === 0) {
+    // 没有本地文件，直接返回已有的 OSS URL
+    return props.modelValue
+  }
+
+  uploading.value = true
+  uploadProgress.value = 0
+
+  try {
+    // 步骤 1: 获取 OSS签名
+    uploadProgress.value = 10
+    const signature = await getOssSignature()
+
+    // 步骤 2: 批量上传所有图片
+    const uploadedUrls: string[] = []
+    const totalFiles = localFiles.value.length
+    
+    for (let i = 0; i < totalFiles; i++) {
+      const imageFile = localFiles.value[i]
+      
+      // 如果已经上传过，跳过
+      if (imageFile.uploaded && imageFile.ossUrl) {
+        uploadedUrls.push(imageFile.ossUrl)
+        continue
+      }
+      
+      // 上传单张图片
+      const progressPerFile = 90 / totalFiles
+      const startProgress = 10 + (i * progressPerFile)
+      uploadProgress.value = startProgress
+      
+      const ossUrl = await uploadToOss(imageFile.file, signature)
+      uploadedUrls.push(ossUrl)
+      
+      // 标记为已上传
+      imageFile.uploaded = true
+      imageFile.ossUrl = ossUrl
+      
+      // 释放临时 URL
+      URL.revokeObjectURL(imageFile.url)
+    }
+    
+    // 步骤 3: 更新进度
+    uploadProgress.value = 100
+    
+    // 步骤 4: 合并所有 URL（已有的 + 新上传的）
+    const allUrls = [...props.modelValue, ...uploadedUrls]
+    emit('update:modelValue', allUrls)
+    
+    // 步骤 5: 清空本地文件列表
+    localFiles.value = []
+    
+    ElMessage.success(`成功上传${totalFiles}张图片`)
+    
+    return allUrls
+  } catch (error: any) {
+    console.error('批量上传失败:', error)
+    ElMessage.error(error.message || '上传失败，请重试')
+    throw error // 向上传播错误
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+    uploadRef.value?.clearFiles?.()
+  }
+}
+
+// 暴露方法给父组件调用
+defineExpose({
+  uploadAllImages,
+})
 </script>
 
 <style scoped lang="scss">
@@ -272,62 +382,39 @@ const removeImage = (index: number) => {
   border: 2px solid #dcdfe6;
   transition: all 0.3s;
 
-  &.is-main {
-    border-color: #409eff;
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-  }
-
   &:hover {
-    .image-actions {
-      opacity: 1;
-    }
+    border-color: #c0c4cc;
   }
 }
 
 .preview-image {
   width: 100%;
   height: 100%;
+  cursor: pointer;
 }
 
-.main-badge {
+.delete-btn-wrapper {
   position: absolute;
-  top: 0;
-  left: 0;
-  background: #409eff;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-bottom-right-radius: 8px;
-}
-
-.image-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
 }
 
 .delete-btn {
-  width: 32px;
-  height: 32px;
-  background: #f56c6c;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
+  transition: all 0.3s;
 
   &:hover {
-    background: #f78989;
+    background: rgba(245, 108, 108, 0.8);
   }
 }
 
