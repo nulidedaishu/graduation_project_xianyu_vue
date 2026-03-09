@@ -20,10 +20,14 @@ const statusMap: Record<ProductStatusType, { text: string; type: 'success' | 'wa
 }
 
 const statusText = computed(() => {
-  return statusMap[props.status as ProductStatusType]?.text || '未知'
+  // 兼容字符串类型的状态值
+  const statusNum = Number(props.status)
+  return statusMap[statusNum as ProductStatusType]?.text || '未知'
 })
 
 const tagType = computed(() => {
-  return statusMap[props.status as ProductStatusType]?.type || 'info'
+  // 兼容字符串类型的状态值
+  const statusNum = Number(props.status)
+  return statusMap[statusNum as ProductStatusType]?.type || 'info'
 })
 </script>

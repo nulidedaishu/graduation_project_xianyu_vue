@@ -85,7 +85,11 @@
             </el-form-item>
 
             <el-form-item label="头像">
-              <el-input v-model="editForm.avatar" placeholder="头像URL" />
+              <ImageUpload
+                v-model="avatarList"
+                :multiple="false"
+                dir="avatars"
+              />
             </el-form-item>
 
             <el-form-item>
@@ -99,11 +103,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { CircleCheck, SoldOut, ShoppingCart, Star, Location } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { updateUser } from '@/api/user'
+import ImageUpload from '@/components/ImageUpload.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -114,6 +119,14 @@ const editForm = reactive({
   nickname: userStore.nickname || '',
   phone: userStore.userInfo?.phone || '',
   avatar: userStore.avatar || '',
+})
+
+// 头像上传组件使用数组，但实际只存储单张图片
+const avatarList = computed({
+  get: () => (editForm.avatar ? [editForm.avatar] : []),
+  set: (val) => {
+    editForm.avatar = val[0] || ''
+  },
 })
 
 const handleSave = async () => {

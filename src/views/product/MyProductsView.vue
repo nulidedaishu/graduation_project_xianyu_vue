@@ -27,7 +27,7 @@
             <template #default="{ row }">
               <div class="product-cell">
                 <el-image
-                  :src="getFirstImage(row.imageUrls)"
+                  :src="getFirstImage(row)"
                   class="product-thumb"
                   fit="cover"
                 />
@@ -103,6 +103,7 @@ import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import { Loading } from '@element-plus/icons-vue'
 import StatusTag from '@/components/StatusTag.vue'
+import type { Product } from '@/types/api'
 
 const router = useRouter()
 const productStore = useProductStore()
@@ -131,10 +132,23 @@ const loadMore = async () => {
   }
 }
 
-// 获取第一张图片
-const getFirstImage = (imageUrls?: string) => {
-  if (!imageUrls) return ''
-  return imageUrls.split(',')[0] || ''
+// 获取第一张图片（优先使用主图字段，向后兼容旧字段）
+const getFirstImage = (product: Product) => {
+  // 优先使用主图
+  if (product.mainImageUrl) {
+    return product.mainImageUrl
+  }
+  // 向后兼容
+  if (!product.imageUrls) return ''
+  // 兼容数组类型
+  if (Array.isArray(product.imageUrls)) {
+    return product.imageUrls[0] || ''
+  }
+  // 字符串类型
+  if (typeof product.imageUrls === 'string') {
+    return product.imageUrls.split(',')[0] || ''
+  }
+  return ''
 }
 
 // 格式化日期

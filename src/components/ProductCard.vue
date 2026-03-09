@@ -13,9 +13,6 @@
           </div>
         </template>
       </el-image>
-      <div v-if="product.status !== 1" class="status-badge">
-        {{ statusText }}
-      </div>
     </div>
 
     <div class="product-info">
@@ -43,27 +40,28 @@ defineEmits<{
   (e: 'click'): void
 }>()
 
-// 解析图片URL
+// 解析图片URL（优先使用主图字段，向后兼容旧字段）
 const imageUrl = computed(() => {
+  // 优先使用新的主图字段
+  if (props.product.mainImageUrl) {
+    return props.product.mainImageUrl
+  }
+  // 向后兼容旧的imageUrls字段
   if (!props.product.imageUrls) {
     return ''
   }
-  const urls = props.product.imageUrls.split(',')
-  return urls[0] || ''
+  // 兼容数组类型
+  if (Array.isArray(props.product.imageUrls)) {
+    return props.product.imageUrls[0] || ''
+  }
+  // 字符串类型
+  if (typeof props.product.imageUrls === 'string') {
+    const urls = props.product.imageUrls.split(',')
+    return urls[0] || ''
+  }
+  return ''
 })
 
-// 状态文本
-const statusText = computed(() => {
-  const statusMap: Record<number, string> = {
-    0: '待审核',
-    1: '已上架',
-    2: '已驳回',
-    3: '已下架',
-    4: '已售出',
-    5: '已删除',
-  }
-  return statusMap[props.product.status] || '未知'
-})
 </script>
 
 <style scoped lang="scss">

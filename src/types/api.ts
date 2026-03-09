@@ -72,7 +72,9 @@ export interface Product {
   price: number
   categoryId: number
   categoryName?: string
-  imageUrls?: string
+  imageUrls?: string // 向后兼容，逗号分隔的图片URL
+  mainImageUrl?: string // 主图URL
+  otherImageUrls?: string[] // 其他图片URL数组
   detail?: string
   contactInfo?: string
   status: ProductStatusType
@@ -80,6 +82,7 @@ export interface Product {
   lockedStock?: number
   userId: number
   userNickname?: string
+  province?: string // 省份
   createTime?: string
   updateTime?: string
 }
@@ -90,8 +93,10 @@ export interface ProductCreateRequest {
   description?: string
   price: number
   categoryId: number
-  imageUrls?: string
-  detail?: string
+  mainImageUrl?: string // 主图URL
+  otherImageUrls?: string[] // 其他图片URL数组
+  freight?: number // 运费
+  districtId?: number // 区域ID
   contactInfo?: string
 }
 

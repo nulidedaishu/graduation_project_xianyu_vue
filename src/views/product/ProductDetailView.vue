@@ -45,12 +45,8 @@
                 <el-tag>{{ productStore.currentProduct.categoryName }}</el-tag>
               </div>
               <div class="meta-item">
-                <span class="meta-label">状态：</span>
-                <status-tag :status="productStore.currentProduct.status" />
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">发布时间：</span>
-                <span>{{ formatDate(productStore.currentProduct.createTime) }}</span>
+                <span class="meta-label">地点：</span>
+                <span>{{ productStore.currentProduct.province || '未知' }}</span>
               </div>
             </div>
 
@@ -185,15 +181,7 @@
         <template #header>
           <div class="section-header">商品描述</div>
         </template>
-        <div class="detail-content">{{ productStore.currentProduct.detail || '暂无详情' }}</div>
-      </el-card>
-
-      <!-- 联系方式 -->
-      <el-card class="contact-section" shadow="never">
-        <template #header>
-          <div class="section-header">联系方式</div>
-        </template>
-        <div class="contact-content">{{ productStore.currentProduct.contactInfo || '暂无联系方式' }}</div>
+        <div class="detail-content">{{ productStore.currentProduct.description || '暂无详情' }}</div>
       </el-card>
     </template>
 
@@ -237,11 +225,35 @@ const isOnSale = computed(() => {
   return productStore.currentProduct?.status === ProductStatus.APPROVED
 })
 
-// 解析图片列表
+// 解析图片列表（优先使用新字段，向后兼容旧字段）
 const imageList = computed(() => {
-  const urls = productStore.currentProduct?.imageUrls
-  if (!urls) return []
-  return urls.split(',').filter(Boolean)
+  const product = productStore.currentProduct
+  if (!product) return []
+
+  // 优先使用新的图片字段
+  const images: string[] = []
+  if (product.mainImageUrl) {
+    images.push(product.mainImageUrl)
+  }
+  if (product.otherImageUrls?.length) {
+    images.push(...product.otherImageUrls)
+  }
+  if (images.length > 0) {
+    return images
+  }
+
+  // 向后兼容旧的imageUrls字段
+  if (product.imageUrls) {
+    // 兼容数组类型（后端可能返回数组）
+    if (Array.isArray(product.imageUrls)) {
+      return product.imageUrls.filter(Boolean)
+    }
+    // 字符串类型（逗号分隔）
+    if (typeof product.imageUrls === 'string') {
+      return product.imageUrls.split(',').filter(Boolean)
+    }
+  }
+  return []
 })
 
 // 判断是否为自己的商品

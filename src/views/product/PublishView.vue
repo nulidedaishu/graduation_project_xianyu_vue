@@ -48,14 +48,14 @@
           />
         </el-form-item>
 
-        <el-form-item label="图片链接" prop="imageUrls">
-          <el-input
-            v-model="form.imageUrls"
-            type="textarea"
-            :rows="2"
-            placeholder="输入图片URL，多个用逗号分隔"
+        <el-form-item label="商品图片" prop="imageList">
+          <ImageUpload
+            v-model="form.imageList"
+            :multiple="true"
+            :limit="5"
+            dir="products"
           />
-          <p class="form-tip">支持多个图片链接，用英文逗号分隔</p>
+          <p class="form-tip">第一张图片将作为主图，最多上传5张</p>
         </el-form-item>
 
         <el-form-item label="联系方式" prop="contactInfo">
@@ -78,6 +78,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
+import ImageUpload from '@/components/ImageUpload.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const route = useRoute()
@@ -92,12 +93,11 @@ const isEdit = computed(() => !!route.query.id)
 const productId = computed(() => Number(route.query.id))
 
 const form = reactive({
-  id: undefined as number | undefined,
   name: '',
   description: '',
   price: 0,
   categoryId: undefined as number | undefined,
-  imageUrls: '',
+  imageList: [] as string[], // 所有图片URL，第一张为主图
   contactInfo: '',
 })
 
@@ -117,6 +117,7 @@ const rules: FormRules = {
   name: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择分类', trigger: 'change' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+  imageList: [{ required: true, message: '请至少上传一张商品图片', trigger: 'change', type: 'array', min: 1 }],
 }
 
 const handleSubmit = async () => {
@@ -126,13 +127,14 @@ const handleSubmit = async () => {
     if (valid && form.categoryId) {
       submitting.value = true
       try {
+        // 拆分主图和附图
         const data = {
-          id: form.id,
           name: form.name,
           description: form.description,
           price: form.price,
           categoryId: form.categoryId,
-          imageUrls: form.imageUrls,
+          mainImageUrl: form.imageList[0] || '',      // 第一张为主图
+          otherImageUrls: form.imageList.slice(1),    // 剩余为附图
           contactInfo: form.contactInfo,
         }
         if (isEdit.value) {
@@ -158,12 +160,24 @@ onMounted(async () => {
     await productStore.fetchProductDetail(productId.value)
     const product = productStore.currentProduct
     if (product) {
-      form.id = product.id
       form.name = product.name
       form.description = product.description || ''
       form.price = product.price
       form.categoryId = product.categoryId
-      form.imageUrls = product.imageUrls || ''
+      // 合并主图和附图为一个数组
+      const images: string[] = []
+      if (product.mainImageUrl) {
+        images.push(product.mainImageUrl)
+      }
+      if (product.otherImageUrls?.length) {
+        images.push(...product.otherImageUrls)
+      }
+      // 向后兼容：如果没有新字段，使用旧的imageUrls
+      if (images.length === 0 && product.imageUrls) {
+        const oldImages = product.imageUrls.split(',').map(url => url.trim()).filter(Boolean)
+        images.push(...oldImages)
+      }
+      form.imageList = images
       form.contactInfo = product.contactInfo || ''
     }
   }
