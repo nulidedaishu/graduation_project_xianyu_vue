@@ -19,14 +19,11 @@
         </el-form-item>
 
         <el-form-item label="商品分类" prop="categoryId">
-          <el-select v-model="form.categoryId" placeholder="请选择分类">
-            <el-option
-              v-for="cat in categoryStore.categories"
-              :key="cat.id"
-              :label="cat.name"
-              :value="cat.id"
-            />
-          </el-select>
+          <CategorySelect
+            v-model="form.categoryId"
+            :category-tree="categoryStore.categoryTree"
+            placeholder="请选择分类"
+          />
         </el-form-item>
 
         <el-form-item label="商品价格" prop="price">
@@ -114,6 +111,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
 import ImageUpload from '@/components/ImageUpload.vue'
+import CategorySelect from '@/components/CategorySelect.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { CascaderProps } from 'element-plus'
 import { getProvinces, getCities, getDistricts } from '@/api/address'
@@ -266,7 +264,7 @@ const handleSubmit = async () => {
 }
 
 onMounted(async () => {
-  await categoryStore.fetchCategories()
+  await categoryStore.fetchCategoryTree()
   // 编辑模式：加载商品详情
   if (isEdit.value) {
     await productStore.fetchProductDetail(productId.value)

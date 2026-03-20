@@ -40,7 +40,8 @@ export const useAdminStore = defineStore(
         adminInfo.value = data.user
         ElMessage.success('登录成功')
         return true
-      } catch (error) {
+      } catch (error: any) {
+        // 错误消息已在 request.ts 中统一显示
         return false
       }
     }

@@ -159,7 +159,7 @@ router.beforeEach((to, _from, next) => {
 
   // 设置页面标题
   if (to.meta.title) {
-    document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE || '闲鱼二手交易平台'}`
+    document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE || ''}`
   }
 
   // 管理员路由

@@ -218,9 +218,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrderStore, useCartStore } from '@/stores'
 import { getProductDetail } from '@/api/product'
-import { checkStockBatch, lockStockBatch } from '@/api/cart'
-import type { OrderItemRequest, OrderCreateRequest } from '@/types/api'
-import { Plus } from '@element-plus/icons-vue'
+import { checkStockBatch } from '@/api/cart'
+import type { OrderCreateRequest } from '@/types/api'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Address, AddressRequest, ProvinceVO, CityVO, DistrictVO } from '@/types/api'
@@ -394,10 +393,16 @@ const loadAddressList = async () => {
 
 // 地区选择变化处理
 const handleRegionChange = (value: number[]) => {
-  if (value && value.length === 3) {
-    addressForm.provinceId = value[0]
-    addressForm.cityId = value[1]
-    addressForm.districtId = value[2]
+  if (value) {
+    if (value.length === 3) {
+      addressForm.provinceId = value[0]
+      addressForm.cityId = value[1]
+      addressForm.districtId = value[2]
+    } else {
+      addressForm.provinceId = 0
+      addressForm.cityId = 0
+      addressForm.districtId = 0
+    }
   } else {
     addressForm.provinceId = 0
     addressForm.cityId = 0

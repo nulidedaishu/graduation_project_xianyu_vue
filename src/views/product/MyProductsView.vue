@@ -25,7 +25,7 @@
         <el-table v-loading="productStore.loading && !loadingMore" :data="filteredProducts">
           <el-table-column label="商品" min-width="200">
             <template #default="{ row }">
-              <div class="product-cell">
+              <div class="product-cell" @click="viewDetail(row.id)" style="cursor: pointer;">
                 <el-image
                   :src="getFirstImage(row)"
                   class="product-thumb"
@@ -39,23 +39,15 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="分类" prop="categoryName" width="120" />
-
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <status-tag :status="row.status" />
             </template>
           </el-table-column>
 
-          <el-table-column label="发布时间" width="180">
-            <template #default="{ row }">
-              {{ formatDate(row.createTime) }}
-            </template>
-          </el-table-column>
-
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="viewDetail(row.id)">查看</el-button>
+              <el-button link type="primary" @click="editProduct(row.id)">编辑</el-button>
               <!-- 待审核(0)或已上架(1)：显示下架 -->
               <el-button
                 v-if="row.status === 0 || row.status === 1"
@@ -162,6 +154,11 @@ const viewDetail = (id: number) => {
   router.push(`/product/${id}`)
 }
 
+// 编辑商品
+const editProduct = (id: number) => {
+  router.push(`/publish?id=${id}`)
+}
+
 // 下架
 const handleOffline = async (id: number) => {
   try {
@@ -256,6 +253,14 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #f5f7fa;
+      border-radius: 4px;
+      padding: 4px;
+      margin: -4px;
+    }
 
     .product-thumb {
       width: 60px;

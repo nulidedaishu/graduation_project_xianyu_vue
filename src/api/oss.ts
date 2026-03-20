@@ -28,8 +28,11 @@ export interface OssSignature {
 /**
  * 获取OSS上传签名
  * 用于前端直传阿里云OSS
+ * @param uploadDir 上传目录，默认为"default"
  * @returns OSS签名信息
  */
-export const getOssSignature = (): Promise<OssSignature> => {
-  return request.get('/get_post_signature_for_oss_upload')
+export const getOssSignature = (uploadDir: string = "default"): Promise<OssSignature> => {
+  return request.get('/api/oss/get_post_signature_for_oss_upload', {
+    params: { upload_dir: uploadDir }
+  })
 }

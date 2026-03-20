@@ -4,7 +4,7 @@
       <div class="auth-header">
         <div class="logo" @click="$router.push('/home')">
           <el-icon size="48" color="#409EFF"><ShoppingBag /></el-icon>
-          <span class="logo-text">闲鱼二手</span>
+          <span class="logo-text">紫金二手</span>
         </div>
         <p class="slogan">闲置交易，让物品焕发新生</p>
       </div>
@@ -18,7 +18,6 @@
       </div>
 
       <div class="auth-footer">
-        <p>© 2024 闲鱼二手交易平台</p>
       </div>
     </div>
 

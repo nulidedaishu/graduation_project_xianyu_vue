@@ -5,7 +5,7 @@
       <div class="search-content">
         <div class="logo" @click="router.push('/home')">
           <el-icon size="32" color="#409EFF"><ShoppingBag /></el-icon>
-          <span class="logo-text">闲鱼二手</span>
+          <span class="logo-text">紫金二手</span>
         </div>
         <div class="search-box">
           <el-input
@@ -91,7 +91,6 @@
     <!-- 页脚 -->
     <el-footer class="footer">
       <div class="footer-content">
-        <p>© 2024 闲鱼二手交易平台 - 基于 Vue 3 + Spring Boot 开发</p>
       </div>
     </el-footer>
   </el-container>

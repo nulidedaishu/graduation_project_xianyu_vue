@@ -4,7 +4,7 @@ import type { ApiResponse } from '@/types/api'
 
 // 创建 axios 实例
 const instance: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -122,7 +122,18 @@ instance.interceptors.response.use(
     } else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请稍后重试')
     } else {
-      ElMessage.error(error.message || '网络错误')
+      // 检查是否有后端返回的错误消息
+      let errorMessage = error.message || '网络错误'
+      if (error.response && error.response.data) {
+        const responseData = error.response.data
+        // 如果后端返回了 message 字段，使用它
+        if (responseData.message && typeof responseData.message === 'string') {
+          errorMessage = responseData.message
+        }
+      }
+      // 更新 error 对象的 message，以便调用方可以获取正确的错误信息
+      error.message = errorMessage
+      ElMessage.error(errorMessage)
     }
 
     return Promise.reject(error)

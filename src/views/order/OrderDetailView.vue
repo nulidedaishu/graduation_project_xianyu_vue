@@ -182,11 +182,10 @@ import {
   ArrowLeft,
   Wallet,
   Box,
-  Truck,
+  Van,
   Check,
   Star,
   CircleClose,
-  Timer,
   CircleCheck,
 } from '@element-plus/icons-vue'
 import { useOrderStore, useUserStore } from '@/stores'
@@ -246,7 +245,7 @@ const getStatusIcon = (status: number) => {
     case OrderStatus.PENDING_SHIPMENT:
       return Box
     case OrderStatus.PENDING_RECEIPT:
-      return Truck
+      return Van
     case OrderStatus.PENDING_REVIEW:
       return Check
     case OrderStatus.COMPLETED:

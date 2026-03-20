@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { Address, AddressRequest, ApiResponse, ProvinceVO, CityVO, DistrictVO } from '@/types/api'
+import type { Address, AddressRequest, ProvinceVO, CityVO, DistrictVO } from '@/types/api'
 
 /**
  * 获取当前用户的地址列表

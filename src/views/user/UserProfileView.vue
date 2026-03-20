@@ -89,6 +89,7 @@
                 ref="avatarUploadRef"
                 v-model="avatarList"
                 :multiple="false"
+                :limit="1"
                 dir="avatars"
                 @files-change="handleAvatarChange"
               />
