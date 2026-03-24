@@ -26,6 +26,14 @@ const getRequestKey = (config: AxiosRequestConfig): string => {
     return `${config.method}_${config.url}_${Date.now()}`
   }
 
+  // 未读数请求使用不同key，避免被取消
+  const isUnreadRequest = config.url?.includes('/unread-count') ||
+                         config.url?.includes('/unread')
+
+  if (isUnreadRequest) {
+    return `${config.method}_${config.url}_${Date.now()}`
+  }
+
   return `${config.method}_${config.url}_${JSON.stringify(config.params)}_${JSON.stringify(config.data)}`
 }
 

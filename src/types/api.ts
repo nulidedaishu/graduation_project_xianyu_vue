@@ -326,3 +326,243 @@ export interface AddressRequest {
   detailAddress: string
   isDefault: number // 0-否, 1-是
 }
+
+// ==================== 收藏相关类型 ====================
+
+// 收藏信息
+export interface Favorite {
+  id: number
+  productId: number
+  productName: string
+  productImage?: string
+  productPrice: number
+  createTime?: string
+}
+
+// 添加收藏请求
+export interface FavoriteCreateRequest {
+  productId: number
+}
+
+// ==================== 评价相关类型 ====================
+
+// 评价类型
+export const EvaluateType = {
+  BUYER_TO_SELLER: 1, // 买家评价卖家
+  SELLER_TO_BUYER: 2, // 卖家评价买家
+} as const
+
+export type EvaluateTypeType = typeof EvaluateType[keyof typeof EvaluateType]
+
+// 评价信息
+export interface Evaluate {
+  id: number
+  orderId: number
+  productId: number
+  productName?: string
+  evaluatorId: number
+  evaluatorName?: string
+  evaluateeId: number
+  evaluateeName?: string
+  type: EvaluateTypeType
+  rating: number
+  content?: string
+  createTime?: string
+}
+
+// 创建评价请求
+export interface EvaluateCreateRequest {
+  orderId: number
+  productId: number
+  evaluateeId: number
+  type: EvaluateTypeType
+  rating: number
+  content?: string
+}
+
+// 待评价订单
+export interface PendingEvaluateOrder {
+  orderId: number
+  orderSn: string
+  productId: number
+  productName: string
+  productImage?: string
+  sellerId: number
+  sellerName?: string
+  buyerId: number
+  buyerName?: string
+  type: 'buyer' | 'seller' // 当前用户需要以什么身份评价
+}
+
+// ==================== 信用积分相关类型 ====================
+
+// 积分变动类型
+export const CreditChangeType = {
+  INCOME: 1, // 收入
+  EXPENSE: 2, // 支出
+} as const
+
+export type CreditChangeTypeType = typeof CreditChangeType[keyof typeof CreditChangeType]
+
+// 积分记录
+export interface CreditLog {
+  id: number
+  changeType: CreditChangeTypeType
+  changeTypeDesc: string
+  points: number
+  description?: string
+  createTime?: string
+}
+
+// 积分统计
+export interface CreditStatistics {
+  currentScore: number
+  creditLevel: string
+  totalIncome: number
+  totalExpense: number
+}
+
+// ==================== 通知相关类型 ====================
+
+// 通知类型
+export const NoticeType = {
+  AUDIT: 1, // 审核通知
+  ORDER: 2, // 订单通知
+  SYSTEM: 3, // 系统公告
+} as const
+
+export type NoticeTypeType = typeof NoticeType[keyof typeof NoticeType]
+
+// 通知信息
+export interface Notice {
+  id: number
+  type: NoticeTypeType
+  typeDesc: string
+  title: string
+  content?: string
+  isRead: boolean
+  createTime?: string
+}
+
+// 通知统计
+export interface NoticeStatistics {
+  total: number
+  audit: number
+  order: number
+  system: number
+}
+
+// ==================== 即时通讯相关类型 ====================
+
+// 消息类型
+export const ChatMessageType = {
+  TEXT: 1, // 文字
+  IMAGE: 2, // 图片
+} as const
+
+export type ChatMessageTypeType = typeof ChatMessageType[keyof typeof ChatMessageType]
+
+// 聊天消息
+export interface ChatMessage {
+  id: number
+  sessionId: string
+  senderId: number
+  senderName?: string
+  senderAvatar?: string
+  receiverId: number
+  receiverName?: string
+  productId?: number
+  productName?: string
+  productImage?: string
+  content: string
+  messageType: ChatMessageTypeType
+  isRead: boolean
+  createTime?: string
+}
+
+// 会话信息
+export interface ChatSession {
+  sessionId: string
+  otherUserId: number
+  otherUserName: string
+  otherUserAvatar?: string
+  productId?: number
+  productName?: string
+  productImage?: string
+  lastMessage?: string
+  lastMessageTime?: string
+  unreadCount: number
+}
+
+// 发送消息请求
+export interface ChatMessageRequest {
+  receiverId: number
+  productId?: number
+  content: string
+  messageType: ChatMessageTypeType
+}
+
+// 未读消息统计
+export interface ChatUnreadCount {
+  total: number
+  sessions: { sessionId: string; count: number }[]
+}
+
+// ==================== 统一消息中心类型 ====================
+
+// 统一会话类型
+export type SessionType = 'user' | 'system'
+
+// 统一会话
+export interface UnifiedSession {
+  sessionType: SessionType
+  sessionId: string
+  // 用户会话字段
+  otherUserId?: number
+  otherUserName?: string
+  otherUserAvatar?: string
+  productId?: number
+  productTitle?: string
+  productImage?: string
+  // 系统会话字段
+  systemTitle?: string
+  systemIcon?: string
+  // 通用字段
+  lastMessage: string
+  lastMsgType: number // 0-文字, 1-图片, 2-通知
+  lastMessageTime?: string
+  unreadCount: number
+  isPinned: boolean
+}
+
+// 消息推送事件
+export interface MessagePushEvent {
+  eventType: 'chat' | 'notice' | 'order' | 'system' | 'ping'
+  data: any
+  serverTime: number
+  sequence: number
+  targetUserId: number | null
+}
+
+// 系统通知会话
+export interface NoticeSession {
+  sessionId: string
+  title: string
+  icon: string
+  lastNoticeTitle: string
+  lastNoticeTime?: string
+  unreadCount: number
+}
+
+// 总未读数
+export interface TotalUnreadCount {
+  total: number
+  chat: number
+  notice: number
+}
+
+// 游标分页参数
+export interface CursorPageParams {
+  lastId?: number
+  size?: number
+}

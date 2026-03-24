@@ -132,7 +132,15 @@
                 <el-button
                   type="default"
                   size="large"
-                  :disabled="availableStock <= 0"
+                  @click="handleToggleFavorite"
+                  :loading="favoriteLoading"
+                >
+                  <el-icon><component :is="isFavorited ? StarFilled : Star" /></el-icon>
+                  {{ isFavorited ? '已收藏' : '收藏' }}
+                </el-button>
+                <el-button
+                  type="default"
+                  size="large"
                   @click="handleContactSeller"
                 >
                   <el-icon><ChatDotRound /></el-icon>联系卖家
@@ -193,11 +201,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, Edit, Download, Upload, Delete, ShoppingCart, Plus } from '@element-plus/icons-vue'
+import { ChatDotRound, Edit, Download, Upload, Delete, ShoppingCart, Plus, Star, StarFilled } from '@element-plus/icons-vue'
 import { useProductStore } from '@/stores/product'
 import { useUserStore, useCartStore } from '@/stores'
 import { ProductStatus } from '@/types/api'
 import StatusTag from '@/components/StatusTag.vue'
+import { addFavorite, removeFavorite, checkFavoriteStatus } from '@/api/favorite'
+import { sendMessage } from '@/api/chat'
 
 const route = useRoute()
 const router = useRouter()
@@ -207,6 +217,8 @@ const cartStore = useCartStore()
 
 const productId = computed(() => Number(route.params.id))
 const quantity = ref(1)
+const isFavorited = ref(false)
+const favoriteLoading = ref(false)
 
 // 可用库存（总库存 - 锁定库存）
 const availableStock = computed(() => {
@@ -272,9 +284,81 @@ const handleEdit = () => {
   router.push(`/publish?id=${productId.value}`)
 }
 
+// 检查收藏状态
+const checkFavorite = async () => {
+  if (!userStore.isLoggedIn) return
+  try {
+    isFavorited.value = await checkFavoriteStatus(productId.value)
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 切换收藏状态
+const handleToggleFavorite = async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+
+  favoriteLoading.value = true
+  try {
+    if (isFavorited.value) {
+      await removeFavorite(productId.value)
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite({ productId: productId.value })
+      ElMessage.success('收藏成功')
+    }
+    isFavorited.value = !isFavorited.value
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+  } finally {
+    favoriteLoading.value = false
+  }
+}
+
 // 联系卖家
-const handleContactSeller = () => {
-  ElMessage.info('联系卖家功能开发中')
+const handleContactSeller = async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+
+  const sellerId = productStore.currentProduct?.userId
+  const productId_val = productStore.currentProduct?.id
+
+  console.log('联系卖家 - 商品信息:', productStore.currentProduct)
+  console.log('联系卖家 - 卖家ID:', sellerId)
+
+  if (!sellerId) {
+    ElMessage.error('无法获取卖家信息，请刷新页面重试')
+    console.error('商品数据缺少userId:', productStore.currentProduct)
+    return
+  }
+
+  // 不能联系自己
+  if (sellerId === userStore.userInfo?.id) {
+    ElMessage.warning('不能联系自己')
+    return
+  }
+
+  try {
+    // 发送一条初始消息或跳转到聊天页面
+    await sendMessage({
+      receiverId: sellerId,
+      productId: productId_val,
+      content: '您好，我对这个商品很感兴趣，请问还在吗？',
+      messageType: 1,
+    })
+    ElMessage.success('已发送消息，请前往消息中心查看')
+    router.push('/messages')
+  } catch (error: any) {
+    console.error('联系卖家失败:', error)
+    ElMessage.error(error?.message || '发送消息失败')
+  }
 }
 
 // 立即购买
@@ -400,6 +484,7 @@ onMounted(() => {
     // 加载购物车数据以便校验库存
     if (userStore.isLoggedIn) {
       cartStore.fetchCartList()
+      checkFavorite()
     }
   }
 })

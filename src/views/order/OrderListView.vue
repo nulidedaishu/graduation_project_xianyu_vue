@@ -95,6 +95,13 @@
               >
                 确认收货
               </el-button>
+              <el-button
+                v-if="order.status === OrderStatus.PENDING_REVIEW"
+                type="primary"
+                @click="goToEvaluate"
+              >
+                去评价
+              </el-button>
             </template>
 
             <!-- 卖家操作 -->
@@ -181,6 +188,11 @@ const getTotalQuantity = (order: Order) => {
 // 查看订单详情
 const goToOrderDetail = (orderId: number) => {
   router.push(`/order/${orderId}`)
+}
+
+// 去评价
+const goToEvaluate = () => {
+  router.push('/orders/evaluate')
 }
 
 // 支付

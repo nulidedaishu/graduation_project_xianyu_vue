@@ -81,6 +81,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/user/AddressView.vue'),
         meta: { title: '收货地址', requiresAuth: true },
       },
+      {
+        path: '/user/favorites',
+        name: 'UserFavorites',
+        component: () => import('@/views/user/FavoritesView.vue'),
+        meta: { title: '我的收藏', requiresAuth: true },
+      },
+      {
+        path: '/user/credit',
+        name: 'UserCredit',
+        component: () => import('@/views/user/CreditView.vue'),
+        meta: { title: '信用积分', requiresAuth: true },
+      },
+      {
+        path: '/messages',
+        name: 'Messages',
+        component: () => import('@/views/message/MessageView.vue'),
+        meta: { title: '消息中心', requiresAuth: true },
+      },
+      {
+        path: '/orders/evaluate',
+        name: 'OrderEvaluate',
+        component: () => import('@/views/order/EvaluateView.vue'),
+        meta: { title: '评价订单', requiresAuth: true },
+      },
     ],
   },
   {

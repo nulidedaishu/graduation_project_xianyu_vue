@@ -51,11 +51,23 @@
               </div>
               <div class="entry-text">我买到的</div>
             </div>
-            <div class="quick-entry-item" @click="router.push('/favorites')">
+            <div class="quick-entry-item" @click="router.push('/user/favorites')">
               <div class="entry-icon">
                 <el-icon :size="24" color="#F56C6C"><Star /></el-icon>
               </div>
               <div class="entry-text">我的收藏</div>
+            </div>
+            <div class="quick-entry-item" @click="router.push('/user/credit')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#9C27B0"><Medal /></el-icon>
+              </div>
+              <div class="entry-text">信用分明细</div>
+            </div>
+            <div class="quick-entry-item" @click="router.push('/messages')">
+              <div class="entry-icon">
+                <el-icon :size="24" color="#00BCD4"><ChatDotRound /></el-icon>
+              </div>
+              <div class="entry-text">消息中心</div>
             </div>
             <div class="quick-entry-item" @click="router.push('/user/addresses')">
               <div class="entry-icon">
@@ -108,7 +120,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { CircleCheck, SoldOut, ShoppingCart, Star, Location } from '@element-plus/icons-vue'
+import { CircleCheck, SoldOut, ShoppingCart, Star, Location, Medal, ChatDotRound } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { updateUser } from '@/api/user'
 import ImageUpload from '@/components/ImageUpload.vue'
@@ -224,7 +236,7 @@ const handleSave = async () => {
   .quick-entry-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 12px;
   }
 
   .quick-entry-item {

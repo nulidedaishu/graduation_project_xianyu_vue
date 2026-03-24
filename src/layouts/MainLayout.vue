@@ -23,6 +23,21 @@
           </el-input>
         </div>
         <div class="search-actions">
+          <!-- 消息 -->
+          <el-badge
+            v-if="userStore.isLoggedIn"
+            :value="unreadCount"
+            :hidden="unreadCount === 0"
+            class="message-badge"
+          >
+            <el-button
+              circle
+              @click="router.push('/messages')"
+            >
+              <el-icon :size="18"><Bell /></el-icon>
+            </el-button>
+          </el-badge>
+
           <!-- 购物车 -->
           <el-badge
             v-if="userStore.isLoggedIn"
@@ -97,43 +112,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore, useCartStore } from '@/stores'
+import { useMessageStore } from '@/stores/message'
+import { useMessagePush } from '@/composables/useMessagePush'
 import {
   ShoppingBag,
   Search,
   Plus,
-  Goods,
   CircleCheck,
   SoldOut,
   ShoppingCart,
   Star,
   SwitchButton,
+  Bell,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const cartStore = useCartStore()
+const messageStore = useMessageStore()
+const { connect, disconnect, onMessage } = useMessagePush()
 
 const searchKeyword = ref('')
 
-// 初始化购物车数量
+// 未读数从message store获取
+const unreadCount = computed(() => messageStore.totalUnreadCount.total)
+
+// 初始化
 onMounted(() => {
   if (userStore.isLoggedIn) {
     cartStore.fetchCartCount()
+    messageStore.fetchTotalUnreadCount()
+
+    // 建立SSE连接
+    connect()
+
+    // 监听消息推送
+    onMessage((event) => {
+      messageStore.handleNewMessage(event)
+    })
   }
 })
 
-// 监听登录状态变化，登录后加载购物车数量
+// 监听登录状态变化
 watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   if (isLoggedIn) {
     cartStore.fetchCartCount()
+    messageStore.fetchTotalUnreadCount()
+    connect()
   } else {
-    // 登出时清空购物车数量
+    // 登出时清空
     cartStore.cartCount = 0
+    messageStore.reset()
+    disconnect()
   }
 })
+
+// 组件卸载时断开连接
+onUnmounted(() => {
+  disconnect()
+})
+
 
 // 在新标签页打开链接
 const openInNewTab = (path: string) => {
@@ -156,9 +197,6 @@ const handleSearch = () => {
 
 const handleCommand = async (command: string) => {
   switch (command) {
-    case 'cart':
-      router.push('/cart')
-      break
     case 'published':
       router.push('/my-products')
       break
@@ -169,7 +207,7 @@ const handleCommand = async (command: string) => {
       router.push('/orders/bought')
       break
     case 'favorites':
-      router.push('/favorites')
+      router.push('/user/favorites')
       break
     case 'logout':
       await userStore.logout()
@@ -239,7 +277,8 @@ const handleCommand = async (command: string) => {
     flex-shrink: 0;
   }
 
-  .cart-badge {
+  .cart-badge,
+  .message-badge {
     :deep(.el-badge__content) {
       top: 8px;
       right: 8px;
