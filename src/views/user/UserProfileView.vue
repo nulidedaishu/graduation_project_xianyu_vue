@@ -273,22 +273,75 @@ const handleSave = async () => {
     }
   }
 
-  @media (max-width: 768px) {
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    .user-card {
+      margin-bottom: 15px;
+
+      .user-avatar {
+        margin-bottom: 12px;
+
+        :deep(.el-avatar) {
+          width: 80px !important;
+          height: 80px !important;
+          font-size: 32px !important;
+        }
+      }
+
+      .nickname {
+        font-size: 18px;
+      }
+
+      .username {
+        font-size: 13px;
+      }
+
+      .user-stats {
+        gap: 30px;
+
+        .stat-item {
+          .stat-value {
+            font-size: 20px;
+          }
+        }
+      }
+    }
+
+    .quick-menu {
+      margin-bottom: 15px;
+    }
+
     .quick-entry-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
     }
 
     .quick-entry-item {
-      padding: 16px 8px;
+      padding: 12px 4px;
 
       .entry-icon {
-        padding: 10px;
+        padding: 8px;
+        margin-bottom: 6px;
+
+        .el-icon {
+          font-size: 20px !important;
+        }
       }
 
       .entry-text {
-        font-size: 13px;
+        font-size: 11px;
       }
+    }
+
+    :deep(.el-form-item__label) {
+      float: none;
+      display: block;
+      text-align: left;
+      padding: 0 0 8px;
+    }
+
+    :deep(.el-form-item__content) {
+      margin-left: 0 !important;
     }
   }
 

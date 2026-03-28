@@ -24,6 +24,10 @@
           <el-icon><User /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/ai-config">
+          <el-icon><Cpu /></el-icon>
+          <span>AI配置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -60,7 +64,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { HomeFilled, Goods, User, ArrowDown } from '@element-plus/icons-vue'
+import { HomeFilled, Goods, User, ArrowDown, Cpu } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores'
 import BreadcrumbView from '@/components/BreadcrumbView.vue'
 

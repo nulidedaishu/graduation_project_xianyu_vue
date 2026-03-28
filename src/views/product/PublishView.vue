@@ -11,8 +11,8 @@
         ref="formRef"
         :model="form"
         :rules="rules"
-        label-width="100px"
-        size="large"
+        :label-width="isMobile ? '80px' : '100px'"
+        :size="isMobile ? 'default' : 'large'"
       >
         <el-form-item label="标题" prop="name">
           <el-input v-model="form.name" placeholder="请输入标题" />
@@ -63,12 +63,25 @@
         </el-form-item>
 
         <el-form-item label="商品描述" prop="description">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="5"
-            placeholder="详细描述商品信息"
-          />
+          <div class="description-wrapper">
+            <el-input
+              v-model="form.description"
+              type="textarea"
+              :rows="5"
+              placeholder="详细描述商品信息"
+            />
+            <el-button
+              type="primary"
+              :disabled="!form.name"
+              :loading="generatingDesc"
+              class="ai-generate-btn"
+              @click="handleGenerateDescription"
+            >
+              <el-icon><MagicStick /></el-icon>
+              AI生成
+            </el-button>
+          </div>
+          <p v-if="!form.name" class="form-tip">请先输入商品标题，再使用AI生成描述</p>
         </el-form-item>
 
         <el-form-item label="商品图片" prop="imageList">
@@ -110,22 +123,26 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
+import { useMobile } from '@/composables/useMobile'
 import ImageUpload from '@/components/ImageUpload.vue'
 import CategorySelect from '@/components/CategorySelect.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { CascaderProps } from 'element-plus'
 import { getProvinces, getCities, getDistricts } from '@/api/address'
+import { generateProductDescription } from '@/api/ai'
 import type { ProvinceVO, CityVO, DistrictVO } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const productStore = useProductStore()
+const { isMobile } = useMobile()
 
 const formRef = ref<FormInstance>()
 const imageUploadRef = ref()
 const submitting = ref(false)
 const hasLocalFiles = ref(false) // 标记是否有本地文件
+const generatingDesc = ref(false) // AI生成描述中
 
 const isEdit = computed(() => !!route.query.id)
 const productId = computed(() => Number(route.query.id))
@@ -134,7 +151,7 @@ const form = reactive({
   name: '',
   description: '',
   price: 0 as number | undefined,
-  shippingFee: 0 as number | undefined,  // 运费
+  freight: 0 as number | undefined,  // 运费
   categoryId: undefined as number | undefined,
   imageList: [] as string[], // 所有图片 URL，第一张为主图
   region: [] as number[],    // 省市区 ID 数组
@@ -212,6 +229,28 @@ const handleFilesChange = (files: any[]) => {
   hasLocalFiles.value = files.length > 0
 }
 
+// AI生成商品描述
+const handleGenerateDescription = async () => {
+  if (!form.name.trim()) {
+    ElMessage.warning('请先输入商品标题')
+    return
+  }
+
+  generatingDesc.value = true
+  try {
+    const res = await generateProductDescription(form.name)
+    if (res.description) {
+      form.description = res.description
+      ElMessage.success('描述生成成功')
+    }
+  } catch (error: any) {
+    console.error('生成描述失败:', error)
+    ElMessage.error(error.message || '生成失败，请检查AI配置')
+  } finally {
+    generatingDesc.value = false
+  }
+}
+
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -236,7 +275,7 @@ const handleSubmit = async () => {
           name: form.name,
           description: form.description,
           price: form.price,
-          shippingFee: form.shippingFee || 0,  // 运费
+          freight: form.freight || 0,  // 运费
           categoryId: form.categoryId,
           mainImageUrl: finalImageList[0] || '',      // 第一张为主图
           otherImageUrls: finalImageList.slice(1),    // 剩余为附图
@@ -273,7 +312,7 @@ onMounted(async () => {
       form.name = product.name
       form.description = product.description || ''
       form.price = product.price
-      form.shippingFee = product.shippingFee || 0
+      form.freight = product.freight || 0
       form.categoryId = product.categoryId
       // 合并主图和附图为一个数组
       const images: string[] = []
@@ -323,6 +362,45 @@ onMounted(async () => {
     font-size: 12px;
     color: #909399;
     margin: 8px 0 0;
+  }
+
+  .description-wrapper {
+    position: relative;
+
+    .ai-generate-btn {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      z-index: 10;
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    :deep(.el-form-item__label) {
+      float: none;
+      display: block;
+      text-align: left;
+      padding: 0 0 8px;
+    }
+
+    :deep(.el-form-item__content) {
+      margin-left: 0 !important;
+    }
+
+    .description-wrapper {
+      .ai-generate-btn {
+        position: static;
+        margin-top: 8px;
+        width: 100%;
+      }
+    }
+
+    .card-header {
+      h2 {
+        font-size: 18px;
+      }
+    }
   }
 }
 </style>

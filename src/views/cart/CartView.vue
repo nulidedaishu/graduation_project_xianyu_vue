@@ -427,8 +427,16 @@ const goToProduct = (productId: number) => {
 }
 
 // 响应式适配
-@media (max-width: 768px) {
+@media (max-width: $screen-sm) {
   .cart-view {
+    .page-header {
+      margin-bottom: 15px;
+
+      h1 {
+        font-size: 20px;
+      }
+    }
+
     .cart-header {
       display: none;
     }
@@ -437,6 +445,7 @@ const goToProduct = (productId: number) => {
       .cart-item {
         flex-wrap: wrap;
         gap: 12px;
+        padding: 15px;
 
         .col-checkbox {
           width: auto;
@@ -446,6 +455,21 @@ const goToProduct = (productId: number) => {
           width: 100%;
           order: -1;
           flex: none;
+
+          .product-info {
+            gap: 12px;
+
+            .product-image {
+              width: 70px;
+              height: 70px;
+            }
+
+            .product-detail {
+              .product-name {
+                font-size: 13px;
+              }
+            }
+          }
         }
 
         .col-price,
@@ -460,12 +484,26 @@ const goToProduct = (productId: number) => {
 
     .cart-footer {
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
+      padding: 12px 15px;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
 
       .footer-left,
       .footer-right {
         width: 100%;
         justify-content: space-between;
+      }
+
+      .footer-right {
+        .summary {
+          gap: 12px;
+
+          .total-amount strong {
+            font-size: 20px;
+          }
+        }
       }
     }
   }

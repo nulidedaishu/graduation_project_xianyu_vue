@@ -30,6 +30,13 @@
           <div class="order-info">
             <span class="order-sn">订单号：{{ order.orderSn }}</span>
             <span class="order-time">{{ formatDate(order.createTime) }}</span>
+            <!-- 倒计时组件 -->
+            <OrderCountdown
+              v-if="order.status === OrderStatus.PENDING_PAYMENT"
+              :expire-time="order.expireTime"
+              :status="order.status"
+              @finish="fetchOrders"
+            />
           </div>
           <el-tag :type="orderStore.getStatusTagType(order.status)">
             {{ order.statusDesc }}
@@ -143,6 +150,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores'
 import { OrderStatus } from '@/types/api'
 import type { Order } from '@/types/api'
+import OrderCountdown from '@/components/OrderCountdown.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -299,7 +307,8 @@ onMounted(() => {
         .order-info {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 12px;
+          flex-wrap: wrap;
 
           .order-sn {
             font-size: 14px;
@@ -387,22 +396,120 @@ onMounted(() => {
 }
 
 // 响应式适配
-@media (max-width: 768px) {
+@media (max-width: $screen-sm) {
   .order-list-view {
-    .order-card {
-      .order-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+    .page-header {
+      margin-bottom: 15px;
+
+      h1 {
+        font-size: 20px;
       }
+    }
 
-      .order-footer {
-        flex-direction: column;
-        gap: 16px;
+    .filter-section {
+      margin-bottom: 15px;
 
-        .order-actions {
-          width: 100%;
-          justify-content: flex-end;
+      :deep(.el-radio-group) {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .el-radio-button {
+          flex: 1;
+          min-width: 80px;
+
+          &__inner {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+
+    .order-list {
+      .order-card {
+        margin-bottom: 12px;
+
+        :deep(.el-card__body) {
+          padding: 12px;
+        }
+
+        .order-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+
+          .order-info {
+            gap: 6px;
+            width: 100%;
+
+            .order-sn {
+              font-size: 13px;
+            }
+
+            .order-time {
+              font-size: 12px;
+            }
+          }
+        }
+
+        .order-items {
+          .order-item {
+            gap: 10px;
+            padding: 10px 0;
+
+            .product-image {
+              width: 60px;
+              height: 60px;
+            }
+
+            .item-info {
+              .product-name {
+                font-size: 13px;
+                margin-bottom: 4px;
+              }
+
+              .item-meta {
+                font-size: 12px;
+              }
+            }
+
+            .item-price {
+              .price {
+                font-size: 13px;
+              }
+
+              .quantity {
+                font-size: 12px;
+              }
+            }
+          }
+        }
+
+        .order-footer {
+          flex-direction: column;
+          gap: 12px;
+
+          .order-total {
+            font-size: 13px;
+
+            .total-amount {
+              font-size: 16px;
+            }
+          }
+
+          .order-actions {
+            width: 100%;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+
+            .el-button {
+              font-size: 13px;
+              padding: 8px 15px;
+            }
+          }
         }
       }
     }

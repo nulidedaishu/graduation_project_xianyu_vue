@@ -158,6 +158,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/AdminUserView.vue'),
         meta: { title: '用户管理' },
       },
+      {
+        path: '/admin/ai-config',
+        name: 'AdminAIConfig',
+        component: () => import('@/views/admin/AdminAIConfigView.vue'),
+        meta: { title: 'AI配置' },
+      },
     ],
   },
   {

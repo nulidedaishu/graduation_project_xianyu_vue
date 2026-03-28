@@ -5,7 +5,7 @@
       <div class="search-content">
         <div class="logo" @click="router.push('/home')">
           <el-icon size="32" color="#409EFF"><ShoppingBag /></el-icon>
-          <span class="logo-text">紫金二手</span>
+          <span class="logo-text mobile-hide">紫金二手</span>
         </div>
         <div class="search-box">
           <el-input
@@ -57,9 +57,19 @@
             v-if="userStore.isLoggedIn"
             type="primary"
             @click="openInNewTab('/publish')"
+            class="mobile-hide"
           >
             <el-icon><Plus /></el-icon>
             发布闲置
+          </el-button>
+          <el-button
+            v-if="userStore.isLoggedIn"
+            type="primary"
+            circle
+            @click="openInNewTab('/publish')"
+            class="desktop-hide"
+          >
+            <el-icon><Plus /></el-icon>
           </el-button>
 
           <template v-if="!userStore.isLoggedIn">
@@ -69,10 +79,10 @@
 
           <el-dropdown v-else @command="handleCommand">
             <span class="user-info" @click="goToUserProfile">
-              <el-avatar :size="32" :src="userStore.avatar">
+              <el-avatar :size="isMobile ? 28 : 32" :src="userStore.avatar">
                 {{ userStore.nickname?.charAt(0) || 'U' }}
               </el-avatar>
-              <span class="nickname">{{ userStore.nickname }}</span>
+              <span class="nickname mobile-hide">{{ userStore.nickname }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -117,6 +127,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore, useCartStore } from '@/stores'
 import { useMessageStore } from '@/stores/message'
 import { useMessagePush } from '@/composables/useMessagePush'
+import { useMobile } from '@/composables/useMobile'
 import {
   ShoppingBag,
   Search,
@@ -134,6 +145,7 @@ const userStore = useUserStore()
 const cartStore = useCartStore()
 const messageStore = useMessageStore()
 const { connect, disconnect, onMessage } = useMessagePush()
+const { isMobile } = useMobile()
 
 const searchKeyword = ref('')
 
@@ -305,6 +317,30 @@ const handleCommand = async (command: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// 移动端适配
+@media (max-width: $screen-sm) {
+  .global-search-bar {
+    padding: 10px 0;
+
+    .search-content {
+      gap: 10px;
+      padding: 0 10px;
+    }
+
+    .search-box {
+      max-width: none;
+    }
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .search-actions {
+    gap: 8px;
+  }
 }
 
 .main-content {

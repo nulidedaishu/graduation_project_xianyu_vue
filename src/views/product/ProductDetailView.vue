@@ -9,8 +9,8 @@
       <el-row :gutter="20">
         <!-- 左侧图片 -->
         <el-col :xs="24" :md="12">
-          <el-card shadow="never">
-            <el-carousel height="400px" indicator-position="outside">
+          <el-card shadow="never" class="image-card">
+            <el-carousel :height="isMobile ? '280px' : '400px'" indicator-position="outside">
               <el-carousel-item
                 v-for="(url, index) in imageList"
                 :key="index"
@@ -204,6 +204,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ChatDotRound, Edit, Download, Upload, Delete, ShoppingCart, Plus, Star, StarFilled } from '@element-plus/icons-vue'
 import { useProductStore } from '@/stores/product'
 import { useUserStore, useCartStore } from '@/stores'
+import { useMobile } from '@/composables/useMobile'
 import { ProductStatus } from '@/types/api'
 import StatusTag from '@/components/StatusTag.vue'
 import { addFavorite, removeFavorite, checkFavoriteStatus } from '@/api/favorite'
@@ -214,6 +215,7 @@ const router = useRouter()
 const productStore = useProductStore()
 const userStore = useUserStore()
 const cartStore = useCartStore()
+const { isMobile } = useMobile()
 
 const productId = computed(() => Number(route.params.id))
 const quantity = ref(1)
@@ -585,6 +587,22 @@ onMounted(() => {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+
+    // 移动端适配
+    @media (max-width: $screen-sm) {
+      gap: 8px;
+
+      .el-button {
+        flex: 1;
+        min-width: calc(50% - 4px);
+        padding: 8px 12px;
+        font-size: 14px;
+
+        &--large {
+          padding: 10px 16px;
+        }
+      }
+    }
   }
 
   .detail-section,
@@ -603,6 +621,28 @@ onMounted(() => {
       color: #606266;
       line-height: 1.8;
       white-space: pre-wrap;
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    .product-header {
+      .product-title {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+
+      .product-price {
+        font-size: 24px;
+      }
+    }
+
+    .image-card {
+      margin-bottom: 15px;
+    }
+
+    .el-col {
+      margin-bottom: 0;
     }
   }
 }

@@ -52,7 +52,7 @@
           <el-tag v-if="selectedAddress.isDefault === 1" type="danger" size="small">默认</el-tag>
         </div>
         <div class="address-row">
-          {{ selectedAddress.fullAddress || `${selectedAddress.province}${selectedAddress.city}${selectedAddress.district}${selectedAddress.detailAddress}` }}
+          {{ selectedAddress.fullAddress || [selectedAddress.province, selectedAddress.city, selectedAddress.district, selectedAddress.detailAddress].filter(Boolean).join('') || '暂无详细地址' }}
         </div>
       </div>
       <div v-else class="no-address">
@@ -112,7 +112,7 @@
     <el-dialog
       v-model="addressDialogVisible"
       title="选择收货地址"
-      width="600px"
+      :width="isMobile ? '90%' : '600px'"
       destroy-on-close
     >
       <div class="address-dialog-content">
@@ -133,7 +133,7 @@
                   <el-tag v-if="item.isDefault === 1" type="danger" size="small">默认</el-tag>
                 </div>
                 <div class="address-row">
-                  {{ item.fullAddress || `${item.province}${item.city}${item.district}${item.detailAddress}` }}
+                  {{ item.fullAddress || [item.province, item.city, item.district, item.detailAddress].filter(Boolean).join('') || '暂无详细地址' }}
                 </div>
               </div>
               <div class="address-actions">
@@ -167,7 +167,7 @@
     <el-dialog
       v-model="addressFormDialogVisible"
       :title="isEditAddress ? '编辑地址' : '新增地址'"
-      width="500px"
+      :width="isMobile ? '90%' : '500px'"
       destroy-on-close
     >
       <el-form
@@ -217,6 +217,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrderStore, useCartStore } from '@/stores'
+import { useMobile } from '@/composables/useMobile'
 import { getProductDetail } from '@/api/product'
 import { checkStockBatch } from '@/api/cart'
 import type { OrderCreateRequest } from '@/types/api'
@@ -239,6 +240,7 @@ const route = useRoute()
 const router = useRouter()
 const orderStore = useOrderStore()
 const cartStore = useCartStore()
+const { isMobile } = useMobile()
 
 // 查询参数
 const productId = computed(() => Number(route.query.productId))
@@ -941,6 +943,80 @@ const goBack = () => {
       align-items: center;
       padding-top: 16px;
       border-top: 1px solid #ebeef5;
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    .page-title {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+
+    .product-section {
+      .product-list {
+        .product-item {
+          flex-wrap: wrap;
+          gap: 10px;
+          padding: 12px 0;
+
+          .product-image {
+            width: 60px;
+            height: 60px;
+          }
+
+          .product-info {
+            flex: 1;
+            min-width: 0;
+
+            .product-name {
+              font-size: 13px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+
+          .product-total {
+            width: 100%;
+            text-align: right;
+            font-size: 14px;
+          }
+        }
+      }
+    }
+
+    .address-section {
+      .selected-address {
+        padding: 12px;
+
+        .contact-row {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+      }
+    }
+
+    .summary-section {
+      .summary-row {
+        padding: 10px 0;
+
+        &.total {
+          .total-price {
+            font-size: 20px;
+          }
+        }
+      }
+    }
+
+    .submit-section {
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px 0;
+
+      .el-button {
+        width: 100%;
+      }
     }
   }
 }

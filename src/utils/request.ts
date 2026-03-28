@@ -78,6 +78,9 @@ instance.interceptors.request.use(
   }
 )
 
+// 跳转锁，防止重复跳转
+let isRedirecting = false
+
 // 响应拦截器
 instance.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
@@ -95,7 +98,8 @@ instance.interceptors.response.use(
     ElMessage.error(res.message || '请求失败')
 
     // 401 未登录
-    if (res.code === 401) {
+    if (res.code === 401 && !isRedirecting) {
+      isRedirecting = true
       const isAdminPath = response.config.url?.startsWith('/api/admin') || response.config.url?.startsWith('/api/products/pending')
       if (isAdminPath) {
         localStorage.removeItem('adminToken')

@@ -56,7 +56,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑地址' : '新增地址'"
-      width="500px"
+      :width="isMobile ? '90%' : '500px'"
       destroy-on-close
     >
       <el-form
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
+import { useMobile } from '@/composables/useMobile'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { Address, AddressRequest, ProvinceVO, CityVO, DistrictVO } from '@/types/api'
 import type { CascaderProps } from 'element-plus'
@@ -126,6 +127,7 @@ import {
 // 地址列表
 const addressList = ref<Address[]>([])
 const loading = ref(false)
+const { isMobile } = useMobile()
 
 // 弹窗控制
 const dialogVisible = ref(false)
@@ -452,6 +454,57 @@ onMounted(() => {
         border-top: 1px solid #ebeef5;
         padding-top: 12px;
         margin-top: 8px;
+      }
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    :deep(.el-dialog) {
+      width: 90% !important;
+      margin: 0 auto;
+    }
+
+    :deep(.el-form-item__label) {
+      float: none;
+      display: block;
+      text-align: left;
+      padding: 0 0 8px;
+    }
+
+    :deep(.el-form-item__content) {
+      margin-left: 0 !important;
+    }
+
+    .address-item {
+      :deep(.el-card__body) {
+        padding: 12px;
+      }
+
+      .address-info {
+        .contact-row {
+          flex-wrap: wrap;
+          gap: 6px;
+
+          .name {
+            font-size: 15px;
+          }
+
+          .phone {
+            font-size: 13px;
+          }
+        }
+
+        .address-row {
+          font-size: 13px;
+        }
+      }
+
+      .address-actions {
+        .el-button {
+          font-size: 13px;
+          padding: 6px 10px;
+        }
       }
     }
   }

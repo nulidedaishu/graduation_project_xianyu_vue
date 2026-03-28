@@ -32,3 +32,30 @@ $screen-sm: 768px;
 $screen-md: 992px;
 $screen-lg: 1200px;
 $screen-xl: 1920px;
+
+// 移动端响应式工具类
+.mobile-hide {
+  @media (max-width: $screen-sm) {
+    display: none !important;
+  }
+}
+
+.mobile-show {
+  display: none !important;
+  @media (max-width: $screen-sm) {
+    display: block !important;
+  }
+}
+
+.mobile-show-flex {
+  display: none !important;
+  @media (max-width: $screen-sm) {
+    display: flex !important;
+  }
+}
+
+.desktop-hide {
+  @media (min-width: $screen-sm + 1px) {
+    display: none !important;
+  }
+}

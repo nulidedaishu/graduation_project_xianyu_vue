@@ -2,10 +2,6 @@
   <div class="message-view">
     <div class="page-header">
       <h1>消息中心</h1>
-      <div v-if="messageStore.showConnectionStatus" class="connection-status">
-        <el-icon class="is-loading"><Loading /></el-icon>
-        <span>连接中...</span>
-      </div>
     </div>
 
     <div class="message-layout">
@@ -159,7 +155,7 @@
             <!-- 用户聊天消息 -->
             <template v-else>
               <div
-                v-for="msg in sortedMessages"
+                v-for="msg in messageStore.currentMessages"
                 :key="msg.id"
                 class="chat-message"
                 :class="{ self: msg.senderId === userStore.userInfo?.id }"
@@ -218,40 +214,40 @@ import { useRouter } from 'vue-router'
 import { Bell, ChatDotRound, Loading, Close } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { useMessageStore } from '@/stores/message'
-import { useMessagePush } from '@/composables/useMessagePush'
+import { useWebSocket } from '@/composables/useWebSocket'
 import type { UnifiedSession, Notice, ChatMessage } from '@/types/api'
 import { markAllNoticesRead as markAllNoticesReadApi } from '@/api/notice'
 
 const router = useRouter()
 const userStore = useUserStore()
 const messageStore = useMessageStore()
-const { connect, onMessage, isConnected } = useMessagePush()
 
 // Refs
 const sessionListRef = ref<HTMLElement>()
 const messageListRef = ref<HTMLElement>()
 const newMessage = ref('')
 
-// 按时间排序的消息列表
-const sortedMessages = computed(() => {
-  return [...messageStore.currentMessages].sort((a: any, b: any) => {
-    return new Date(a.createTime || 0).getTime() - new Date(b.createTime || 0).getTime()
-  })
+// 初始化 WebSocket 连接
+const { sendMessage: sendWsMessage } = useWebSocket({
+  onMessage: (message: ChatMessage) => {
+    // 处理新消息
+    messageStore.handleNewMessage(message, 'chat')
+    // 刷新未读数
+    messageStore.fetchTotalUnreadCount()
+  },
+  onConnect: () => {
+    console.log('WebSocket 连接成功')
+  },
+  onError: (error) => {
+    console.error('WebSocket 错误:', error)
+  },
 })
 
-// 初始化SSE连接
+// 初始化
 onMounted(() => {
   // 加载会话列表
   messageStore.fetchSessions()
   messageStore.fetchTotalUnreadCount()
-
-  // 建立SSE连接
-  connect()
-
-  // 监听消息推送
-  onMessage((event) => {
-    messageStore.handleNewMessage(event)
-  })
 })
 
 // 选择会话
@@ -267,11 +263,22 @@ async function selectSession(session: UnifiedSession) {
 // 发送消息
 async function sendMessage() {
   if (!newMessage.value.trim()) return
+  if (!messageStore.currentSession || messageStore.currentSession.sessionType !== 'user') return
 
   const content = newMessage.value.trim()
   newMessage.value = ''
 
-  await messageStore.sendMessage(content)
+  // 通过 WebSocket 发送消息
+  const success = sendWsMessage(
+    messageStore.currentSession.otherUserId!,
+    content,
+    messageStore.currentSession.productId
+  )
+
+  if (!success) {
+    // WebSocket 发送失败，回退到 HTTP API
+    await messageStore.sendMessage(content)
+  }
 
   // 滚动到底部
   setTimeout(() => {
@@ -410,14 +417,6 @@ function formatTime(dateStr?: string) {
       font-size: 24px;
       color: #303133;
       margin: 0;
-    }
-
-    .connection-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #909399;
-      font-size: 14px;
     }
   }
 

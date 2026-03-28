@@ -23,7 +23,16 @@
             </el-icon>
             <div class="status-text">
               <h2>{{ orderStore.currentOrder.statusDesc }}</h2>
-              <p v-if="orderStore.currentOrder.expireTime && orderStore.currentOrder.status === OrderStatus.PENDING_PAYMENT">
+              <!-- 倒计时显示 -->
+              <p
+                v-if="orderStore.currentOrder.status === OrderStatus.PENDING_PAYMENT && countdownText"
+                class="countdown-text"
+                :class="{ urgent: isUrgent, finished: isFinished }"
+              >
+                <el-icon><Timer /></el-icon>
+                {{ countdownText }}
+              </p>
+              <p v-else-if="orderStore.currentOrder.expireTime && orderStore.currentOrder.status === OrderStatus.PENDING_PAYMENT">
                 请在 {{ formatDate(orderStore.currentOrder.expireTime) }} 前完成支付
               </p>
             </div>
@@ -176,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
@@ -187,9 +196,11 @@ import {
   Star,
   CircleClose,
   CircleCheck,
+  Timer,
 } from '@element-plus/icons-vue'
 import { useOrderStore, useUserStore } from '@/stores'
 import { OrderStatus } from '@/types/api'
+import { useOrderCountdown } from '@/composables/useCountdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -197,6 +208,18 @@ const orderStore = useOrderStore()
 const userStore = useUserStore()
 
 const orderId = computed(() => Number(route.params.id))
+
+// 订单倒计时
+const { countdownText, isUrgent, isFinished } = useOrderCountdown(
+  computed(() => orderStore.currentOrder?.expireTime),
+  computed(() => orderStore.currentOrder?.status ?? -1),
+  {
+    onFinish: () => {
+      // 倒计时结束，刷新订单状态
+      orderStore.fetchOrderDetail(orderId.value)
+    },
+  }
+)
 
 // 是否是买家
 const isBuyer = computed(() => {
@@ -407,6 +430,38 @@ onMounted(() => {
             font-size: 13px;
             color: #909399;
             margin: 0;
+          }
+
+          .countdown-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #409eff;
+            font-weight: 500;
+
+            .el-icon {
+              font-size: 16px;
+            }
+
+            &.urgent {
+              color: #f56c6c;
+              animation: pulse 1s ease-in-out infinite;
+            }
+
+            &.finished {
+              color: #909399;
+              animation: none;
+            }
+          }
+
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.6;
+            }
           }
         }
       }

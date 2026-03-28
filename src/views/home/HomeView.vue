@@ -32,7 +32,7 @@
         <el-col
           v-for="product in productStore.products"
           :key="product.id"
-          :xs="24"
+          :xs="12"
           :sm="12"
           :md="8"
           :lg="6"
@@ -65,6 +65,7 @@ import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/ProductCard.vue'
 import CategoryNav from '@/components/CategoryNav.vue'
+import { throttle } from '@/utils/throttle'
 
 const categoryStore = useCategoryStore()
 const productStore = useProductStore()
@@ -109,8 +110,8 @@ const loadMore = async () => {
   }
 }
 
-// 滚动监听
-const handleScroll = () => {
+// 滚动监听（节流，200ms 间隔）
+const handleScroll = throttle(() => {
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop
   const windowHeight = window.innerHeight
   const documentHeight = document.documentElement.scrollHeight
@@ -119,7 +120,7 @@ const handleScroll = () => {
   if (scrollTop + windowHeight >= documentHeight - 100) {
     loadMore()
   }
-}
+}, 200)
 
 onMounted(() => {
   categoryStore.fetchCategoryTree()
@@ -178,6 +179,34 @@ onUnmounted(() => {
       .el-icon {
         font-size: 18px;
       }
+    }
+  }
+
+  // 移动端适配
+  @media (max-width: $screen-sm) {
+    .tabs-header {
+      gap: 10px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+
+      .tab-item {
+        padding: 6px 15px;
+        font-size: 14px;
+
+        .el-icon {
+          font-size: 16px;
+        }
+      }
+    }
+
+    :deep(.el-row) {
+      margin-left: -5px !important;
+      margin-right: -5px !important;
+    }
+
+    :deep(.el-col) {
+      padding-left: 5px !important;
+      padding-right: 5px !important;
     }
   }
 }

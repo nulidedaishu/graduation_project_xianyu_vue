@@ -4,7 +4,6 @@ import type {
   UnifiedSession,
   ChatMessage,
   Notice,
-  MessagePushEvent,
   TotalUnreadCount,
   CursorPageParams,
 } from '@/types/api'
@@ -30,8 +29,6 @@ export const useMessageStore = defineStore('message', () => {
   const currentSession = ref<UnifiedSession | null>(null)
   // 当前会话的消息列表
   const currentMessages = ref<(ChatMessage | Notice)[]>([])
-  // SSE连接状态
-  const sseConnected = ref(false)
   // 总未读数
   const totalUnreadCount = ref<TotalUnreadCount>({ total: 0, chat: 0, notice: 0 })
   // 分页状态
@@ -51,8 +48,6 @@ export const useMessageStore = defineStore('message', () => {
   const userSessions = computed(() =>
     sessions.value.filter((s) => s.sessionType === 'user')
   )
-  // 是否显示连接状态指示
-  const showConnectionStatus = computed(() => !sseConnected.value)
 
   // ===== Actions =====
 
@@ -133,10 +128,10 @@ export const useMessageStore = defineStore('message', () => {
       }
 
       if (params?.lastId) {
-        // 加载更多（追加到列表）
-        currentMessages.value.push(...messages)
+        // 加载更多历史消息（较老的消息），插入到列表前面
+        currentMessages.value.unshift(...messages)
       } else {
-        // 首次加载
+        // 首次加载，后端返回的是升序（老消息在前，新消息在后）
         currentMessages.value = messages
       }
 
@@ -153,10 +148,10 @@ export const useMessageStore = defineStore('message', () => {
   async function loadMoreMessages(size = 20) {
     if (!hasMoreMessages.value || isLoadingMessages.value) return
 
-    const lastMessage = currentMessages.value[currentMessages.value.length - 1]
-    if (!lastMessage) return
+    const firstMessage = currentMessages.value[0]
+    if (!firstMessage) return
 
-    await loadMessages({ lastId: lastMessage.id, size })
+    await loadMessages({ lastId: firstMessage.id, size })
   }
 
   /**
@@ -174,8 +169,8 @@ export const useMessageStore = defineStore('message', () => {
       messageType: 1,
     })
 
-    // 添加到当前消息列表
-    currentMessages.value.unshift(msg)
+    // 添加到当前消息列表（新消息在底部）
+    currentMessages.value.push(msg)
 
     // 更新会话列表中的最后消息
     const session = sessions.value.find(
@@ -240,16 +235,16 @@ export const useMessageStore = defineStore('message', () => {
   }
 
   /**
-   * 处理SSE推送的新消息
+   * 处理 WebSocket 推送的新消息
    */
-  function handleNewMessage(event: MessagePushEvent) {
+  function handleNewMessage(message: ChatMessage | Notice, type: 'chat' | 'notice') {
     // 更新总未读数
     fetchTotalUnreadCount()
 
-    if (event.eventType === 'chat') {
-      handleChatMessage(event.data as ChatMessage)
-    } else if (event.eventType === 'notice') {
-      handleNoticeMessage(event.data as Notice)
+    if (type === 'chat') {
+      handleChatMessage(message as ChatMessage)
+    } else if (type === 'notice') {
+      handleNoticeMessage(message as Notice)
     }
   }
 
@@ -266,7 +261,7 @@ export const useMessageStore = defineStore('message', () => {
       // 避免重复添加
       const exists = currentMessages.value.some((m) => m.id === message.id)
       if (!exists) {
-        currentMessages.value.unshift(message)
+        currentMessages.value.push(message)
       }
     }
 
@@ -328,16 +323,9 @@ export const useMessageStore = defineStore('message', () => {
     if (currentSession.value?.sessionType === 'system') {
       const exists = currentMessages.value.some((m) => m.id === notice.id)
       if (!exists) {
-        currentMessages.value.unshift(notice as any)
+        currentMessages.value.push(notice as any)
       }
     }
-  }
-
-  /**
-   * 设置SSE连接状态
-   */
-  function setSseConnected(connected: boolean) {
-    sseConnected.value = connected
   }
 
   /**
@@ -357,7 +345,6 @@ export const useMessageStore = defineStore('message', () => {
     sessions.value = []
     currentSession.value = null
     currentMessages.value = []
-    sseConnected.value = false
     totalUnreadCount.value = { total: 0, chat: 0, notice: 0 }
     hasMoreMessages.value = true
     sessionPage.value = 1
@@ -369,7 +356,6 @@ export const useMessageStore = defineStore('message', () => {
     sessions,
     currentSession,
     currentMessages,
-    sseConnected,
     totalUnreadCount,
     hasMoreMessages,
     isLoadingMessages,
@@ -379,7 +365,6 @@ export const useMessageStore = defineStore('message', () => {
     // Getters
     systemSession,
     userSessions,
-    showConnectionStatus,
 
     // Actions
     fetchSessions,
@@ -391,7 +376,6 @@ export const useMessageStore = defineStore('message', () => {
     markSessionAsRead,
     fetchTotalUnreadCount,
     handleNewMessage,
-    setSseConnected,
     updateSession,
     deleteSession,
     reset,
