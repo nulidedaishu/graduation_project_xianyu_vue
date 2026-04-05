@@ -121,6 +121,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { MagicStick } from '@element-plus/icons-vue'
 import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
 import { useMobile } from '@/composables/useMobile'
@@ -366,6 +367,7 @@ onMounted(async () => {
 
   .description-wrapper {
     position: relative;
+    width: 100%;
 
     .ai-generate-btn {
       position: absolute;

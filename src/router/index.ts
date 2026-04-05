@@ -183,7 +183,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, _from) => {
   const userStore = useUserStore()
   const adminStore = useAdminStore()
 
@@ -196,31 +196,25 @@ router.beforeEach((to, _from, next) => {
   if (to.meta.requiresAdmin) {
     if (!adminStore.isLoggedIn) {
       ElMessage.warning('请先登录管理员账号')
-      next('/admin/login')
-      return
+      return '/admin/login'
     }
   }
 
   // 管理员登录页，已登录则跳转
   if (to.path === '/admin/login' && adminStore.isLoggedIn) {
-    next('/admin')
-    return
+    return '/admin'
   }
 
   // 需要登录但未登录
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
-    next({ path: '/login', query: { redirect: to.fullPath } })
-    return
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
 
   // 已登录但访问登录/注册页
   if (to.meta.guestOnly && userStore.isLoggedIn && !to.path.startsWith('/admin')) {
-    next('/home')
-    return
+    return '/home'
   }
-
-  next()
 })
 
 export default router

@@ -1,9 +1,9 @@
 import request from '@/utils/request'
 import type { PageResult, UserInfo } from '@/types/api'
 
-// 获取用户列表
-export const getUserList = (params?: { page?: number; size?: number }): Promise<PageResult<UserInfo>> => {
-  return request.get('/api/users', { params })
+// 获取用户列表（管理员）
+export const getUserList = (params?: { page?: number; size?: number; keyword?: string; status?: number }): Promise<PageResult<UserInfo>> => {
+  return request.get('/api/admin/users', { params })
 }
 
 // 获取用户详情

@@ -64,7 +64,7 @@ export const deleteProduct = (id: number): Promise<void> => {
 
 // 获取待审核商品列表（管理员）
 export const getPendingProducts = (params?: { page?: number; size?: number }): Promise<PageResult<Product>> => {
-  return request.get('/api/products/pending', { params })
+  return request.get('/api/admin/products/pending', { params })
 }
 
 // 审核商品（管理员）

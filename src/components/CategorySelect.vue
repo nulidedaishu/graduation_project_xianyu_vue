@@ -1,27 +1,26 @@
 <template>
-  <div class="category-select">
-    <!-- 搜索框 -->
-    <div class="search-box">
-      <el-input
-        v-model="searchText"
-        :placeholder="searchPlaceholder || '搜索分类...'"
-        clearable
-        @input="handleSearch"
-        @clear="clearSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-    </div>
-
-    <!-- 选中状态显示 -->
-    <div v-if="modelValue" class="selected-display">
-      <el-icon><Check /></el-icon>
-      <span class="selected-text">已选择：{{ getCategoryPath(modelValue) }}</span>
+  <div class="category-select-wrapper" ref="wrapperRef">
+    <!-- 触发按钮和已选内容 -->
+    <div class="category-trigger">
       <el-button
-        v-if="!disabled"
-        type="text"
+        :disabled="disabled"
+        @click="togglePicker"
+        :type="modelValue ? 'primary' : 'default'"
+      >
+        <el-icon><component :is="modelValue ? Check : ArrowDown" /></el-icon>
+        {{ modelValue ? '已选择' : '选择分类' }}
+      </el-button>
+
+      <span v-if="modelValue" class="selected-path">
+        {{ getCategoryPath(modelValue) }}
+      </span>
+      <span v-else-if="placeholder" class="placeholder-text">
+        {{ placeholder }}
+      </span>
+
+      <el-button
+        v-if="modelValue && !disabled"
+        link
         size="small"
         @click="clearSelection"
         class="clear-btn"
@@ -29,82 +28,93 @@
         清除
       </el-button>
     </div>
-    <div v-else-if="placeholder" class="placeholder-display">
-      <span class="placeholder-text">{{ placeholder }}</span>
-    </div>
 
-    <!-- 分类选择区域 -->
-    <div class="category-content">
-      <!-- 一级分类 -->
-      <div class="level-1">
-        <div
-          v-for="cat1 in displayedTree"
-          :key="cat1.id"
-          class="cat-1-item"
-          :class="{
-            active: activeLevel1Id === cat1.id,
-            selected: modelValue === cat1.id,
-            disabled: disabled
-          }"
-          @mouseenter="handleMouseEnter(cat1)"
-          @mouseleave="handleMouseLeave"
-          @click="handleSelect(cat1.id)"
+    <!-- 分类选择器弹窗 -->
+    <div v-if="showPicker" class="category-picker">
+      <!-- 搜索框 -->
+      <div class="search-box">
+        <el-input
+          v-model="searchText"
+          :placeholder="searchPlaceholder || '搜索分类...'"
+          clearable
+          @input="handleSearch"
+          @clear="clearSearch"
         >
-          <el-icon size="16">
-            <component :is="getCategoryIcon(cat1.icon)" />
-          </el-icon>
-          <span class="cat-name" v-html="highlightText(cat1.name)"></span>
-          <el-icon v-if="cat1.children?.length" size="12" class="arrow">
-            <ArrowRight />
-          </el-icon>
-        </div>
-        <!-- 空状态 -->
-        <div v-if="displayedTree.length === 0" class="empty-categories">
-          <el-empty
-            :description="searchText ? '未找到匹配的分类' : '暂无分类'"
-            :image-size="50"
-          />
-        </div>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
       </div>
 
-      <!-- 二级分类弹层 -->
-      <div
-        v-if="showLevel2Menu && activeLevel1Category && activeLevel1Category.children?.length"
-        class="sub-menu level-2-menu"
-        @mouseenter="clearHideTimer"
-        @mouseleave="handleLevel2MenuLeave"
-      >
-        <div v-for="cat2 in activeLevel1Category.children" :key="cat2.id" class="sub-cat-row">
-          <!-- 二级分类标题 -->
+      <!-- 分类选择区域 -->
+      <div class="category-content">
+        <!-- 一级分类 -->
+        <div class="level-1">
           <div
-            class="cat-2-title"
-            :class="{ selected: modelValue === cat2.id, disabled: disabled }"
-            @mouseenter="handleMouseEnterLevel2(cat2)"
-            @mouseleave="handleMouseLeaveLevel2"
-            @click="handleSelect(cat2.id)"
+            v-for="cat1 in displayedTree"
+            :key="cat1.id"
+            class="cat-1-item"
+            :class="{
+              active: activeLevel1Id === cat1.id,
+              selected: modelValue === cat1.id,
+              disabled: disabled
+            }"
+            @mouseenter="handleMouseEnter(cat1)"
+            @click="handleSelect(cat1.id)"
           >
-            <span v-html="highlightText(cat2.name)"></span>
-            <el-icon v-if="cat2.children?.length"><ArrowRight /></el-icon>
+            <el-icon size="16">
+              <component :is="getCategoryIcon(cat1.icon)" />
+            </el-icon>
+            <span class="cat-name" v-html="highlightText(cat1.name)"></span>
+            <el-icon v-if="cat1.children?.length" size="12" class="arrow">
+              <ArrowRight />
+            </el-icon>
+          </div>
+          <!-- 空状态 -->
+          <div v-if="displayedTree.length === 0" class="empty-categories">
+            <el-empty
+              :description="searchText ? '未找到匹配的分类' : '暂无分类'"
+              :image-size="50"
+            />
           </div>
         </div>
-      </div>
 
-      <!-- 三级分类弹层 -->
-      <div
-        v-if="showLevel3Menu && activeLevel2Category && activeLevel2Category.children?.length"
-        class="sub-menu level-3-menu"
-        @mouseenter="clearHideTimer"
-        @mouseleave="handleMouseLeaveLevel2"
-      >
-        <div class="cat-3-list">
-          <span
+        <!-- 二级分类弹层 -->
+        <div
+          v-if="showLevel2Menu && activeLevel1Category && activeLevel1Category.children?.length"
+          class="sub-menu level-2-menu"
+        >
+          <div v-for="cat2 in activeLevel1Category.children" :key="cat2.id" class="sub-cat-row">
+            <div
+              class="cat-2-title"
+              :class="{ selected: modelValue === cat2.id, disabled: disabled }"
+              @mouseenter="handleMouseEnterLevel2(cat2)"
+              @click="handleSelect(cat2.id)"
+            >
+              <span v-html="highlightText(cat2.name)"></span>
+              <el-icon v-if="cat2.children?.length"><ArrowRight /></el-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 三级分类弹层 -->
+        <div
+          v-if="showLevel3Menu && activeLevel2Category && activeLevel2Category.children?.length"
+          class="sub-menu level-3-menu"
+        >
+          <div
             v-for="cat3 in activeLevel2Category.children"
             :key="cat3.id"
-            class="cat-3-item"
-            :class="{ selected: modelValue === cat3.id, disabled: disabled }"
-            @click.stop="handleSelect(cat3.id)"
-            v-html="highlightText(cat3.name)"
-          ></span>
+            class="cat-3-row"
+          >
+            <div
+              class="cat-3-title"
+              :class="{ selected: modelValue === cat3.id, disabled: disabled }"
+              @click="handleSelect(cat3.id)"
+            >
+              <span v-html="highlightText(cat3.name)"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -112,9 +122,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   ArrowRight,
+  ArrowDown,
   Phone,
   Monitor,
   ShoppingBag,
@@ -170,13 +181,38 @@ const emit = defineEmits<{
   'change': [value: number | undefined]
 }>()
 
+const wrapperRef = ref<HTMLElement>()
+const showPicker = ref(false)
 const activeLevel1Id = ref<number | null>(null)
 const activeLevel2Id = ref<number | null>(null)
 const showLevel2Menu = ref(false)
 const showLevel3Menu = ref(false)
 const searchText = ref('')
-let hideTimer: ReturnType<typeof setTimeout> | null = null
-let hideLevel3Timer: ReturnType<typeof setTimeout> | null = null
+
+// 切换选择器显示
+const togglePicker = () => {
+  showPicker.value = !showPicker.value
+}
+
+// 关闭选择器
+const closePicker = () => {
+  showPicker.value = false
+}
+
+// 点击外部关闭选择器
+const handleClickOutside = (event: MouseEvent) => {
+  if (wrapperRef.value && !wrapperRef.value.contains(event.target as Node)) {
+    closePicker()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 // 防抖搜索处理
 const debouncedSearch = debounce((value: string) => {
@@ -189,16 +225,11 @@ const debouncedSearch = debounce((value: string) => {
   const filterTree = (tree: CategoryTreeVO[]): CategoryTreeVO[] => {
     return tree
       .map(cat => {
-        // 检查当前分类是否匹配
         const isMatch = cat.name.toLowerCase().includes(searchTerm)
-
-        // 递归过滤子分类
         let filteredChildren: CategoryTreeVO[] | undefined
         if (cat.children?.length) {
           filteredChildren = filterTree(cat.children)
         }
-
-        // 如果当前分类匹配或子分类有匹配，则保留
         if (isMatch || (filteredChildren && filteredChildren.length > 0)) {
           return {
             ...cat,
@@ -232,28 +263,27 @@ const filteredTree = ref<CategoryTreeVO[]>(props.categoryTree)
 watch(() => props.categoryTree, (newTree) => {
   filteredTree.value = newTree
   if (searchText.value) {
-    // 如果正在搜索，重新过滤
     debouncedSearch(searchText.value)
   }
 }, { immediate: true })
 
-// 显示的分类树（搜索时使用过滤后的，否则使用原始）
+// 显示的分类树
 const displayedTree = computed(() => {
   return filteredTree.value
 })
 
-// 当前激活的一级分类（用于显示二级菜单）
+// 当前激活的一级分类
 const activeLevel1Category = computed(() => {
   return displayedTree.value.find(cat => cat.id === activeLevel1Id.value)
 })
 
-// 当前激活的二级分类（用于显示三级菜单）
+// 当前激活的二级分类
 const activeLevel2Category = computed(() => {
   if (!activeLevel1Category.value || !activeLevel1Category.value.children) return null
   return activeLevel1Category.value.children.find(cat => cat.id === activeLevel2Id.value)
 })
 
-// 图标映射（从CategoryNav.vue复制）
+// 图标映射
 const iconMap: Record<string, string> = {
   'phone': 'Phone',
   'computer': 'Monitor',
@@ -274,7 +304,7 @@ const getCategoryIcon = (icon?: string) => {
   return iconMap[icon || ''] || 'Goods'
 }
 
-// 高亮文本（简单的文本高亮，注意XSS防护）
+// 高亮文本
 const highlightText = (text: string | undefined) => {
   if (!text) return ''
   if (!searchText.value.trim()) return text
@@ -285,7 +315,6 @@ const highlightText = (text: string | undefined) => {
 
   if (index === -1) return text
 
-  // 安全地构建高亮文本（避免XSS）
   const before = text.slice(0, index)
   const match = text.slice(index, index + searchTerm.length)
   const after = text.slice(index + searchTerm.length)
@@ -293,7 +322,7 @@ const highlightText = (text: string | undefined) => {
   return `${before}<span class="highlight">${match}</span>${after}`
 }
 
-// 获取分类路径（用于显示选中状态）
+// 获取分类路径
 const getCategoryPath = (categoryId: number): string => {
   const findPath = (tree: CategoryTreeVO[], id: number, path: string[] = []): string[] | null => {
     for (const cat of tree) {
@@ -313,32 +342,23 @@ const getCategoryPath = (categoryId: number): string => {
   return path ? path.join(' > ') : '未知分类'
 }
 
-// 鼠标交互逻辑（从CategoryNav.vue复制并修改）
+// 鼠标交互逻辑
 const handleMouseEnter = (cat: CategoryTreeVO) => {
   if (props.disabled) return
-  clearHideTimer()
   if (cat.children?.length) {
     activeLevel1Id.value = cat.id
     showLevel2Menu.value = true
-    // 切换到新的一级分类时，重置二级和三级菜单状态
     activeLevel2Id.value = null
     showLevel3Menu.value = false
   } else {
-    activeLevel1Id.value = null
+    activeLevel1Id.value = cat.id
     showLevel2Menu.value = false
     showLevel3Menu.value = false
   }
 }
 
-// 二级分类鼠标悬停
 const handleMouseEnterLevel2 = (cat2: CategoryTreeVO) => {
   if (props.disabled) return
-  clearHideTimer()
-  // 清除三级菜单隐藏计时器
-  if (hideLevel3Timer) {
-    clearTimeout(hideLevel3Timer)
-    hideLevel3Timer = null
-  }
   if (cat2.children?.length) {
     activeLevel2Id.value = cat2.id
     showLevel3Menu.value = true
@@ -348,65 +368,13 @@ const handleMouseEnterLevel2 = (cat2: CategoryTreeVO) => {
   }
 }
 
-// 二级分类鼠标离开
-const handleMouseLeaveLevel2 = () => {
-  // 延迟隐藏三级菜单
-  if (!showLevel3Menu.value) return
-  if (hideLevel3Timer) {
-    clearTimeout(hideLevel3Timer)
-  }
-  hideLevel3Timer = setTimeout(() => {
-    if (!showLevel3Menu.value) return
-    showLevel3Menu.value = false
-    activeLevel2Id.value = null
-  }, 150)
-}
-
-const handleMouseLeave = () => {
-  startHideTimer()
-}
-
-const handleLevel2MenuLeave = () => {
-  activeLevel1Id.value = null
-  showLevel2Menu.value = false
-  // 离开二级菜单时也隐藏三级菜单
-  activeLevel2Id.value = null
-  showLevel3Menu.value = false
-}
-
-const clearHideTimer = () => {
-  if (hideTimer) {
-    clearTimeout(hideTimer)
-    hideTimer = null
-  }
-  if (hideLevel3Timer) {
-    clearTimeout(hideLevel3Timer)
-    hideLevel3Timer = null
-  }
-}
-
-const startHideTimer = () => {
-  if (props.disabled) return
-  hideTimer = setTimeout(() => {
-    showLevel2Menu.value = false
-    showLevel3Menu.value = false
-    activeLevel1Id.value = null
-    activeLevel2Id.value = null
-  }, 150)
-}
-
 // 选择分类
 const handleSelect = (categoryId: number) => {
   if (props.disabled) return
 
   emit('update:modelValue', categoryId)
   emit('change', categoryId)
-
-  // 选择后关闭子菜单
-  showLevel2Menu.value = false
-  showLevel3Menu.value = false
-  activeLevel1Id.value = null
-  activeLevel2Id.value = null
+  closePicker()
 }
 
 // 清除选择
@@ -417,66 +385,70 @@ const clearSelection = () => {
   emit('change', undefined)
 }
 
-// 组件卸载时清理
 onUnmounted(() => {
-  clearHideTimer()
   debouncedSearch.cancel()
 })
 </script>
 
 <style scoped lang="scss">
-.category-select {
+.category-select-wrapper {
   position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.category-trigger {
   display: flex;
-  flex-direction: column;
-  min-height: 200px;
-  max-height: 300px;
+  align-items: center;
+  gap: 12px;
+
+  .selected-path {
+    font-size: 14px;
+    color: #606266;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .placeholder-text {
+    font-size: 14px;
+    color: #909399;
+    font-style: italic;
+  }
+
+  .clear-btn {
+    padding: 0;
+    height: auto;
+    font-size: 12px;
+  }
+}
+
+.category-picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 540px;
+  height: 300px;
+  background: #fff;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  background: #fff;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 
   .search-box {
     padding: 12px;
     border-bottom: 1px solid #e4e7ed;
     background: #f8f9fa;
+    flex-shrink: 0;
 
     :deep(.el-input) {
       .el-input__wrapper {
         background: #fff;
       }
-    }
-  }
-
-  .selected-display,
-  .placeholder-display {
-    padding: 8px 12px;
-    border-bottom: 1px solid #e4e7ed;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #606266;
-
-    .el-icon {
-      color: #67c23a;
-      font-size: 14px;
-    }
-
-    .selected-text {
-      flex: 1;
-    }
-
-    .placeholder-text {
-      color: #909399;
-      font-style: italic;
-    }
-
-    .clear-btn {
-      padding: 0;
-      height: auto;
-      font-size: 12px;
     }
   }
 
@@ -517,7 +489,8 @@ onUnmounted(() => {
         padding: 8px 16px;
         cursor: pointer;
         transition: all 0.2s;
-        min-height: 36px;
+        height: 36px;
+        box-sizing: border-box;
 
         .cat-name {
           flex: 1;
@@ -601,40 +574,45 @@ onUnmounted(() => {
       top: 0;
       width: 180px;
       background: #fff;
-      padding: 12px 20px;
+      padding: 8px 0;
       overflow-y: auto;
       border-right: 1px solid #e4e7ed;
       height: 100%;
       box-sizing: border-box;
 
-      .level-2-menu {
+      &.level-2-menu {
         left: 180px;
       }
 
-      .level-3-menu {
+      &.level-3-menu {
         left: 360px;
       }
 
-      .sub-cat-row {
-        margin-bottom: 16px;
+      .sub-cat-row,
+      .cat-3-row {
+        margin-bottom: 0;
 
         &:last-child {
           margin-bottom: 0;
         }
 
-        .cat-2-title {
+        .cat-2-title,
+        .cat-3-title {
           display: flex;
           align-items: center;
-          margin-bottom: 8px;
-          font-weight: bold;
-          font-size: 13px;
-          color: #303133;
+          padding: 8px 16px;
           cursor: pointer;
-          padding: 4px 0;
           transition: all 0.2s;
+          height: 36px;
+          box-sizing: border-box;
+          font-size: 13px;
+          color: #606266;
 
           span {
             flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
 
             :deep(.highlight) {
               color: #409eff;
@@ -647,27 +625,33 @@ onUnmounted(() => {
 
           .el-icon {
             margin-left: 4px;
-            font-size: 11px;
+            font-size: 12px;
+            color: #c0c4cc;
           }
 
-          &:hover:not(.disabled) {
-            color: #409eff;
+          &:hover:not(.disabled),
+          &.active:not(.disabled) {
+            background: #409eff;
+            color: #fff;
+
+            .el-icon {
+              color: #fff;
+            }
+
+            span :deep(.highlight) {
+              color: #fff;
+              background-color: rgba(255, 255, 255, 0.3);
+            }
           }
 
           &.selected:not(.disabled) {
+            background: #ecf5ff;
             color: #409eff;
-            position: relative;
+            font-weight: 500;
+            border-right: 3px solid #409eff;
 
-            &::before {
-              content: '';
-              position: absolute;
-              left: -8px;
-              top: 50%;
-              transform: translateY(-50%);
-              width: 4px;
-              height: 16px;
-              background: #409eff;
-              border-radius: 2px;
+            .el-icon {
+              color: #409eff;
             }
 
             span :deep(.highlight) {
@@ -680,60 +664,6 @@ onUnmounted(() => {
             cursor: not-allowed;
             opacity: 0.6;
             color: #c0c4cc;
-          }
-        }
-
-        .cat-3-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          padding-left: 8px;
-
-          .cat-3-item {
-            padding: 3px 10px;
-            font-size: 12px;
-            color: #606266;
-            background: #f5f7fa;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s;
-
-            :deep(.highlight) {
-              color: #409eff;
-              font-weight: 500;
-              background-color: #ecf5ff;
-              padding: 0 2px;
-              border-radius: 2px;
-            }
-
-            &:hover:not(.disabled) {
-              color: #fff;
-              background: #409eff;
-
-              :deep(.highlight) {
-                color: #fff;
-                background-color: rgba(255, 255, 255, 0.3);
-              }
-            }
-
-            &.selected:not(.disabled) {
-              color: #409eff;
-              background: #ecf5ff;
-              font-weight: 500;
-              box-shadow: 0 0 0 1px #409eff inset;
-
-              :deep(.highlight) {
-                color: #409eff;
-                background-color: rgba(64, 158, 255, 0.1);
-              }
-            }
-
-            &.disabled {
-              cursor: not-allowed;
-              opacity: 0.6;
-              color: #c0c4cc;
-              background: #f0f2f5;
-            }
           }
         }
       }

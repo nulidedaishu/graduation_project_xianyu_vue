@@ -63,7 +63,7 @@ export const markSessionRead = (
   sessionType: 'user' | 'system'
 ): Promise<void> => {
   if (sessionType === 'system') {
-    return request.put('/api/notices/session/read')
+    return request.put('/api/notices/read-all')
   } else {
     // 从sessionKey中提取对方用户ID
     const otherUserId = sessionId.split('_').find((id) => id !== String(getCurrentUserId()))

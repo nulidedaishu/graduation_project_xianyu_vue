@@ -63,10 +63,7 @@ instance.interceptors.request.use(
     addPending(config)
 
     // 添加 token (根据请求路径判断使用用户token还是管理员token)
-    const isAdminPath = config.url?.startsWith('/api/admin') ||
-                       config.url?.startsWith('/api/products/pending') ||
-                       config.url?.startsWith('/api/products/recommend') ||
-                       /\/api\/products\/\d+\/review/.test(config.url || '')
+    const isAdminPath = config.url?.startsWith('/api/admin')
     const token = isAdminPath
       ? localStorage.getItem('adminToken')
       : localStorage.getItem('token')
