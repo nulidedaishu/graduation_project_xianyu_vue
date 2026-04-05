@@ -26,11 +26,12 @@ export const getUnifiedSessions = (
 
 /**
  * 获取用户聊天记录（游标分页）
+ * 注意：此接口返回的是数组，不是PageResult
  */
 export const getChatMessages = (
   userId: number,
   params?: CursorPageParams
-): Promise<PageResult<ChatMessage>> => {
+): Promise<ChatMessage[]> => {
   return request.get(`/api/chat/messages/${userId}/cursor`, { params })
 }
 
@@ -104,11 +105,12 @@ export const deleteSession = (sessionKey: string): Promise<void> => {
 
 // 辅助函数：获取当前用户ID（从本地存储或store中获取）
 function getCurrentUserId(): number {
-  const userInfo = localStorage.getItem('user_info')
+  // 注意：localStorage 中存储的键是 'userInfo'（camelCase）
+  const userInfo = localStorage.getItem('userInfo')
   if (userInfo) {
     try {
       const user = JSON.parse(userInfo)
-      return user.id
+      return Number(user.id) || 0
     } catch {
       return 0
     }

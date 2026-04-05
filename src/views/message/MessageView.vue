@@ -230,10 +230,8 @@ const newMessage = ref('')
 // 初始化 WebSocket 连接
 const { sendMessage: sendWsMessage } = useWebSocket({
   onMessage: (message: ChatMessage) => {
-    // 处理新消息
+    // 处理新消息（handleNewMessage 内部会刷新未读数）
     messageStore.handleNewMessage(message, 'chat')
-    // 刷新未读数
-    messageStore.fetchTotalUnreadCount()
   },
   onConnect: () => {
     console.log('WebSocket 连接成功')
@@ -266,7 +264,35 @@ async function sendMessage() {
   if (!messageStore.currentSession || messageStore.currentSession.sessionType !== 'user') return
 
   const content = newMessage.value.trim()
+  const currentUser = userStore.userInfo
+
+  // 乐观更新：先创建临时消息并显示在列表中
+  // 使用负数临时ID，方便后续被真实消息替换
+  const tempId = -Date.now()
+  const tempMessage: ChatMessage = {
+    id: tempId,
+    sessionId: messageStore.currentSession.sessionId,
+    senderId: Number(currentUser?.id) || 0,
+    senderName: currentUser?.nickname,
+    senderAvatar: currentUser?.avatar,
+    receiverId: messageStore.currentSession.otherUserId!,
+    receiverName: messageStore.currentSession.otherUserName,
+    productId: messageStore.currentSession.productId,
+    productName: messageStore.currentSession.productTitle,
+    content: content,
+    messageType: 1, // 文字消息
+    isRead: false,
+    createTime: new Date().toISOString(),
+  }
+
+  // 立即清空输入框并添加到消息列表
   newMessage.value = ''
+  messageStore.currentMessages.push(tempMessage)
+
+  // 滚动到底部
+  setTimeout(() => {
+    scrollToBottom()
+  }, 0)
 
   // 通过 WebSocket 发送消息
   const success = sendWsMessage(
@@ -277,10 +303,32 @@ async function sendMessage() {
 
   if (!success) {
     // WebSocket 发送失败，回退到 HTTP API
-    await messageStore.sendMessage(content)
+    try {
+      const sentMessage = await messageStore.sendMessage(content)
+      // 成功发送后，用真实消息替换临时消息
+      if (sentMessage) {
+        const index = messageStore.currentMessages.findIndex(m => m.id === tempId)
+        if (index > -1) {
+          messageStore.currentMessages.splice(index, 1, sentMessage)
+        }
+      }
+    } catch (error) {
+      // 发送失败，移除临时消息并提示
+      const index = messageStore.currentMessages.findIndex(m => m.id === tempId)
+      if (index > -1) {
+        messageStore.currentMessages.splice(index, 1)
+      }
+      ElMessage.error('发送失败，请重试')
+      return
+    }
   }
 
-  // 滚动到底部
+  // 更新会话列表的最后消息
+  messageStore.currentSession.lastMessage = content
+  messageStore.currentSession.lastMsgType = 0
+  messageStore.currentSession.lastMessageTime = tempMessage.createTime
+
+  // 再次滚动到底部确保消息可见
   setTimeout(() => {
     scrollToBottom()
   }, 100)

@@ -199,14 +199,14 @@ export function useWebSocket(options: WebSocketOptions = {}) {
    */
   function convertToChatMessage(body: any): ChatMessage {
     return {
-      id: body.id,
+      id: Number(body.id),
       sessionId: body.sessionKey || '',
-      senderId: body.senderId,
+      senderId: Number(body.senderId),
       senderName: body.senderNickname,
       senderAvatar: body.senderAvatar,
-      receiverId: body.receiverId,
+      receiverId: Number(body.receiverId),
       receiverName: body.receiverNickname,
-      productId: body.productId,
+      productId: body.productId ? Number(body.productId) : undefined,
       productName: body.productTitle,
       productImage: body.productImage,
       content: body.content,

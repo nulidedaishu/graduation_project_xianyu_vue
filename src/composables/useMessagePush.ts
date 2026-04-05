@@ -43,7 +43,7 @@ export function useMessagePush(options: MessagePushOptions = {}) {
     }
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const url = `${baseUrl}/api/sse/connect?token=${encodeURIComponent(token)}`
+    const url = `${baseUrl}/api/messages/stream?token=${encodeURIComponent(token)}`
 
     const es = new EventSource(url)
 

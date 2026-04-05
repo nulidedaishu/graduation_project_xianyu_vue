@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useUserStore } from '@/stores'
 import type {
   UnifiedSession,
   ChatMessage,
@@ -115,12 +116,19 @@ export const useMessageStore = defineStore('message', () => {
       let messages: (ChatMessage | Notice)[] = []
 
       if (currentSession.value.sessionType === 'user') {
-        // 加载用户聊天记录
+        // 加载用户聊天记录（游标接口返回的是数组，不是分页对象）
         const res = await getChatMessages(
           currentSession.value.otherUserId!,
           params || { size: 20 }
         )
-        messages = res.records || []
+        console.log('[loadMessages] 获取聊天记录:', res)
+        // 确保 ID 是数字类型
+        messages = (res || []).map((m: any) => ({
+          ...m,
+          id: Number(m.id),
+          senderId: Number(m.senderId),
+          receiverId: Number(m.receiverId),
+        }))
       } else {
         // 加载系统通知
         const res = await getNoticeMessages(params || { size: 20 })
@@ -129,10 +137,12 @@ export const useMessageStore = defineStore('message', () => {
 
       if (params?.lastId) {
         // 加载更多历史消息（较老的消息），插入到列表前面
-        currentMessages.value.unshift(...messages)
+        // 后端返回降序，需要反转后再插入到前面
+        currentMessages.value.unshift(...messages.reverse())
       } else {
-        // 首次加载，后端返回的是升序（老消息在前，新消息在后）
-        currentMessages.value = messages
+        // 首次加载，后端返回的是降序（新消息在前，老消息在后）
+        // 需要反转为升序显示（老消息在上，新消息在下）
+        currentMessages.value = messages.reverse()
       }
 
       // 判断是否还有更多
@@ -156,6 +166,7 @@ export const useMessageStore = defineStore('message', () => {
 
   /**
    * 发送消息
+   * 注意：此方法不添加消息到列表，由调用方处理UI更新
    */
   async function sendMessage(content: string): Promise<ChatMessage | null> {
     if (!currentSession.value || currentSession.value.sessionType !== 'user') {
@@ -168,9 +179,6 @@ export const useMessageStore = defineStore('message', () => {
       content,
       messageType: 1,
     })
-
-    // 添加到当前消息列表（新消息在底部）
-    currentMessages.value.push(msg)
 
     // 更新会话列表中的最后消息
     const session = sessions.value.find(
@@ -207,7 +215,11 @@ export const useMessageStore = defineStore('message', () => {
   async function fetchTotalUnreadCount() {
     try {
       totalUnreadCount.value = await getTotalUnreadCount()
-    } catch (error) {
+    } catch (error: any) {
+      // 忽略请求被取消的错误（这是正常的，比如组件卸载时）
+      if (error?.name === 'CanceledError' || error?.message?.includes('canceled')) {
+        return
+      }
       console.error('获取未读数失败:', error)
     }
   }
@@ -252,17 +264,56 @@ export const useMessageStore = defineStore('message', () => {
    * 处理聊天消息
    */
   function handleChatMessage(message: ChatMessage) {
+    console.log('[handleChatMessage] 收到消息:', {id: message.id, content: message.content, senderId: message.senderId, senderIdType: typeof message.senderId})
+
     // 如果当前正在查看该会话，添加到消息列表
     if (
       currentSession.value?.sessionType === 'user' &&
       (currentSession.value.otherUserId === message.senderId ||
         currentSession.value.otherUserId === message.receiverId)
     ) {
-      // 避免重复添加
-      const exists = currentMessages.value.some((m) => m.id === message.id)
-      if (!exists) {
-        currentMessages.value.push(message)
+      // 首先检查是否已存在相同ID的消息（严格去重）
+      const existsById = currentMessages.value.some((m) => m.id === message.id && m.id > 0)
+      if (existsById) {
+        console.log('[handleChatMessage] 消息已存在，跳过:', message.id)
+        return
       }
+
+      // 检查是否是当前用户发送的消息（可能是乐观更新的确认）
+      const userStore = useUserStore()
+      const currentUserId = userStore.userInfo?.id
+      console.log('[handleChatMessage] currentUserId:', currentUserId, typeof currentUserId)
+
+      // 使用 == 避免类型不一致问题
+      const isSelfMessage = message.senderId == currentUserId
+      console.log('[handleChatMessage] isSelfMessage:', isSelfMessage)
+
+      if (isSelfMessage) {
+        // 查找并移除相同内容的临时消息（临时消息使用负数ID）
+        console.log('[handleChatMessage] 查找临时消息，content:', message.content, 'senderId:', message.senderId)
+        console.log('[handleChatMessage] 当前消息列表详情:', currentMessages.value.map(m => ({id: m.id, content: m.content, senderId: m.senderId, senderIdType: typeof m.senderId})))
+        const tempIndex = currentMessages.value.findIndex(
+          (m) => {
+            const isNegativeId = m.id < 0
+            const contentMatch = m.content === message.content
+            const senderMatch = m.senderId == message.senderId
+            console.log('[handleChatMessage] 检查消息:', {id: m.id, content: m.content, senderId: m.senderId, isNegativeId, contentMatch, senderMatch})
+            return isNegativeId && contentMatch && senderMatch
+          }
+        )
+        console.log('[handleChatMessage] tempIndex:', tempIndex)
+        if (tempIndex > -1) {
+          console.log('[handleChatMessage] 移除临时消息:', currentMessages.value[tempIndex].id)
+          currentMessages.value.splice(tempIndex, 1)
+        } else {
+          console.log('[handleChatMessage] 未找到匹配的临时消息')
+        }
+      }
+
+      // 添加消息到列表
+      console.log('[handleChatMessage] 添加消息到列表:', message.id)
+      currentMessages.value.push(message)
+      console.log('[handleChatMessage] 当前消息列表:', currentMessages.value.map(m => ({id: m.id, content: m.content})))
     }
 
     // 更新或创建会话
@@ -383,3 +434,20 @@ export const useMessageStore = defineStore('message', () => {
 })
 
 type SessionType = 'user' | 'system'
+
+/**
+ * 获取当前用户ID（从本地存储中获取）
+ */
+function getCurrentUserId(): number {
+  // 注意：localStorage 中存储的键是 'userInfo'（camelCase）
+  const userInfo = localStorage.getItem('userInfo')
+  if (userInfo) {
+    try {
+      const user = JSON.parse(userInfo)
+      return Number(user.id) || 0
+    } catch {
+      return 0
+    }
+  }
+  return 0
+}

@@ -69,5 +69,5 @@ export const getPendingProducts = (params?: { page?: number; size?: number }): P
 
 // 审核商品（管理员）
 export const reviewProduct = (id: number, data: Omit<ProductReviewRequest, 'productId'>): Promise<void> => {
-  return request.post(`/api/products/${id}/review`, data)
+  return request.post(`/api/admin/products/${id}/review`, { ...data, productId: id })
 }

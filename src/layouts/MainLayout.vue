@@ -161,9 +161,9 @@ onMounted(() => {
     // 建立SSE连接
     connect()
 
-    // 监听消息推送
+    // 监听消息推送（SSE只刷新未读数，消息内容由WebSocket处理）
     onMessage((event) => {
-      messageStore.handleNewMessage(event)
+      messageStore.fetchTotalUnreadCount()
     })
   }
 })
