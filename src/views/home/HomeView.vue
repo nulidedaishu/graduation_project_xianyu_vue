@@ -41,6 +41,9 @@
         </el-col>
       </el-row>
 
+      <!-- 加载触发器（IntersectionObserver 目标元素） -->
+      <div ref="loadTriggerRef" class="load-trigger"></div>
+
       <!-- 加载中 -->
       <div v-if="productStore.loading" class="loading-more">
         <el-icon class="loading-icon"><Loading /></el-icon>
@@ -65,12 +68,12 @@ import { useCategoryStore } from '@/stores/category'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/ProductCard.vue'
 import CategoryNav from '@/components/CategoryNav.vue'
-import { throttle } from '@/utils/throttle'
 
 const categoryStore = useCategoryStore()
 const productStore = useProductStore()
 
 const homeViewRef = ref<HTMLElement | null>(null)
+const loadTriggerRef = ref<HTMLElement | null>(null)
 const activeTab = ref<'recommend' | 'latest'>('recommend')
 
 // 在新标签页打开链接
@@ -110,27 +113,36 @@ const loadMore = async () => {
   }
 }
 
-// 滚动监听（节流，200ms 间隔）
-const handleScroll = throttle(() => {
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-  const windowHeight = window.innerHeight
-  const documentHeight = document.documentElement.scrollHeight
-
-  // 距离底部 100px 时触发加载
-  if (scrollTop + windowHeight >= documentHeight - 100) {
-    loadMore()
-  }
-}, 200)
+// 使用 IntersectionObserver 监听加载触发器
+let observer: IntersectionObserver | null = null
 
 onMounted(() => {
   categoryStore.fetchCategoryTree()
   // 默认加载猜你喜欢
   productStore.fetchRecommendedProducts()
-  window.addEventListener('scroll', handleScroll)
+
+  // 创建 IntersectionObserver，提前 100px 触发加载
+  observer = new IntersectionObserver(
+    (entries) => {
+      const target = entries[0]
+      if (target.isIntersecting && !productStore.loading && productStore.hasMore) {
+        loadMore()
+      }
+    },
+    {
+      rootMargin: '100px',
+    }
+  )
+
+  if (loadTriggerRef.value) {
+    observer.observe(loadTriggerRef.value)
+  }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
+  if (observer) {
+    observer.disconnect()
+  }
 })
 </script>
 
@@ -227,6 +239,12 @@ onUnmounted(() => {
   padding: 20px;
   color: #909399;
   font-size: 14px;
+}
+
+// 加载触发器（IntersectionObserver 目标元素）
+.load-trigger {
+  height: 20px;
+  margin-top: 20px;
 }
 
 @keyframes rotating {
